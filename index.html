@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Accelerator — 2D Relativistic Simulator</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚛️</text></svg>">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0d1117;--surface:#161b22;--border:#30363d;
+    --text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;
+    --red:#f85149;--green:#39d353;--gold:#ffd700;--orange:#ff6b35;
+  }
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;overflow-x:hidden}
+  .app{display:grid;grid-template-columns:320px 1fr;grid-template-rows:auto 1fr;height:100vh;gap:0}
+  header{grid-column:1/-1;padding:16px 28px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px}
+  header h1{font-size:1.35rem;font-weight:700;letter-spacing:-0.02em}
+  header .badge{background:var(--accent);color:#000;font-size:0.65rem;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase}
+  aside{background:var(--surface);border-right:1px solid var(--border);padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+  aside h2{font-size:0.85rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:2px}
+  .ctrl{display:flex;flex-direction:column;gap:4px}
+  .ctrl label{font-size:0.82rem;color:var(--muted);display:flex;justify-content:space-between}
+  .ctrl label span{color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums}
+  input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:#21262d;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--surface)}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+  .toggle-row span{font-size:0.82rem;color:var(--muted)}
+  .toggle{position:relative;width:44px;height:24px;cursor:pointer}
+  .toggle input{opacity:0;width:0;height:0}
+  .toggle .slider{position:absolute;inset:0;background:#21262d;border-radius:12px;transition:0.25s}
+  .toggle .slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#484f58;border-radius:50%;transition:0.25s}
+  .toggle input:checked+.slider{background:var(--accent)}
+  .toggle input:checked+.slider:before{transform:translateX(20px);background:#fff}
+  .btn{width:100%;padding:12px;border:none;border-radius:8px;font-size:0.95rem;font-weight:700;cursor:pointer;transition:0.15s;letter-spacing:0.02em}
+  .btn-primary{background:var(--accent);color:#000}
+  .btn-primary:hover{background:#79c0ff}
+  .btn-danger{background:var(--red);color:#fff}
+  .btn-danger:hover{background:#ff7b72}
+  .divider{border:none;border-top:1px solid var(--border);margin:4px 0}
+  .info-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:0.78rem;line-height:1.55;color:var(--muted)}
+  .info-box code{color:var(--accent);font-size:0.75rem}
+  main{display:flex;flex-direction:column;overflow:hidden}
+  .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border)}
+  .metric{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;text-align:center}
+  .metric .label{font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
+  .metric .value{font-size:1.15rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+  .metric .delta{font-size:0.7rem;margin-top:2px}
+  .metric .delta.up{color:var(--green)}
+  .plots{flex:1;display:grid;grid-template-columns:1.6fr 1fr;gap:0;min-height:0}
+  .plot-box{position:relative;border-right:1px solid var(--border);overflow:hidden}
+  .plot-box:last-child{border-right:none}
+  .plot-box canvas{width:100%;height:100%;display:block}
+  .plot-title{position:absolute;top:10px;left:14px;font-size:0.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;pointer-events:none;z-index:2}
+  .speed-indicator{position:absolute;bottom:10px;right:14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:0.72rem;color:var(--accent);font-weight:600;z-index:2}
+  .welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px;padding:40px;text-align:center}
+  .welcome h2{font-size:1.6rem;font-weight:700}
+  .welcome p{color:var(--muted);max-width:520px;line-height:1.6;font-size:0.92rem}
+  .features{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:10px;max-width:800px;width:100%}
+  .feature{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;text-align:left}
+  .feature h3{font-size:0.95rem;margin-bottom:8px}
+  .feature p{font-size:0.8rem;color:var(--muted);line-height:1.5}
+  @media(max-width:900px){.app{grid-template-columns:1fr}.plots{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ===== HEADER ===== -->
+<header>
+  <h1>⚛️ Particle Accelerator</h1>
+  <span class="badge">2D Relativistic Simulator</span>
+</header>
+
+<!-- ===== SIDEBAR ===== -->
+<aside>
+  <h2>Controls</h2>
+
+  <div class="ctrl">
+    <label>Magnetic Field (B) <span id="bVal">1.2 T</span></label>
+    <input type="range" id="bSlider" min="0.1" max="5.0" step="0.1" value="1.2">
+  </div>
+
+  <div class="ctrl">
+    <label>RF Cavity Voltage <span id="rfVal">150 kV</span></label>
+    <input type="range" id="rfSlider" min="10" max="500" step="10" value="150">
+  </div>
+
+  <div class="ctrl">
+    <label>Simulation Speed <span id="speedVal">10x</span></label>
+    <input type="range" id="speedSlider" min="1" max="100" step="1" value="10">
+  </div>
+
+  <div class="toggle-row">
+    <span>Special Relativity</span>
+    <label class="toggle"><input type="checkbox" id="relToggle" checked><span class="slider"></span></label>
+  </div>
+
+  <hr class="divider">
+
+  <button class="btn btn-primary" id="runBtn">▶ Run Simulation</button>
+  <button class="btn btn-danger" id="resetBtn" style="display:none">⏹ Reset</button>
+
+  <hr class="divider">
+  <h2>Physics</h2>
+  <div class="info-box">
+    <strong style="color:var(--text)">Lorentz Force</strong><br>
+    <code>F = q(v × B)</code> — magnetic force bends the proton into a circular orbit perpendicular to its velocity.<br><br>
+    <strong style="color:var(--text)">RF Cavity</strong><br>
+    Electric field kick adds <code>ΔKE = qV</code> per revolution, accelerating the particle.<br><br>
+    <strong style="color:var(--text)">Special Relativity</strong><br>
+    <code>γ = 1/√(1 − v²/c²)</code> — as v → c, γ → ∞ and momentum grows without bound. Velocity is clamped below c.<br><br>
+    <strong style="color:var(--text)">Euler-Cromer</strong><br>
+    Symplectic integrator: update momentum p first, then recover v, then update x. Conserves energy over long runs.
+  </div>
+</aside>
+
+<!-- ===== MAIN AREA ===== -->
+<main>
+  <div class="metrics" id="metricsBar" style="display:none">
+    <div class="metric"><div class="label">Velocity</div><div class="value" id="mVel">0.000%</div><div class="delta up" id="mVelD"></div></div>
+    <div class="metric"><div class="label">Kinetic Energy</div><div class="value" id="mKE">0.000 MeV</div><div class="delta up" id="mKED"></div></div>
+    <div class="metric"><div class="label">Lorentz γ</div><div class="value" id="mGamma">1.000000</div><div class="delta" id="mGammaD"></div></div>
+    <div class="metric"><div class="label">Revolutions</div><div class="value" id="mRevs">0</div></div>
+    <div class="metric"><div class="label">Sim Time</div><div class="value" id="mTime">0 ns</div></div>
+  </div>
+
+  <div class="plots" id="plotsArea">
+    <!-- Welcome screen (hidden when running) -->
+    <div class="welcome" id="welcomeScreen">
+      <h2>2D Relativistic Particle Accelerator</h2>
+      <p>Configure magnetic field strength, RF cavity voltage, and simulation speed in the sidebar. Press <strong>Run Simulation</strong> to watch a proton orbit the ring, gaining energy with each pass through the RF cavity.</p>
+      <div class="features">
+        <div class="feature"><h3>🧲 Magnetic Bending</h3><p>A uniform B-field creates the Lorentz force <code>F = q(v × B)</code>, bending the proton into a circular orbit.</p></div>
+        <div class="feature"><h3>📡 RF Cavity</h3><p>Each revolution through the cavity adds <code>ΔKE = qV</code> of energy — the same principle behind CERN's LHC.</p></div>
+        <div class="feature"><h3>⚡ Relativity</h3><p>As v → c, the Lorentz factor γ grows nonlinearly, making acceleration progressively harder.</p></div>
+      </div>
+    </div>
+
+    <!-- Canvas plots (shown when running) -->
+    <div class="plot-box" id="trajBox" style="display:none">
+      <div class="plot-title">2D Trajectory</div>
+      <canvas id="trajCanvas"></canvas>
+      <div class="speed-indicator" id="speedBadge">10x</div>
+    </div>
+    <div class="plot-box" id="energyBox" style="display:none">
+      <div class="plot-title">Kinetic Energy vs Time</div>
+      <canvas id="energyCanvas"></canvas>
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+// =============================================================================
+//  PHYSICAL CONSTANTS (SI)
+// =============================================================================
+const C          = 3.0e8;           // Speed of light (m/s)
+const PROTON_MASS  = 1.67e-27;     // Proton rest mass (kg)
+const PROTON_CHARGE= 1.602e-19;    // Elementary charge (C)
+const EV           = 1.602e-19;    // 1 eV in Joules
+const MEV          = 1e6 * EV;     // 1 MeV in Joules
+
+// =============================================================================
+//  SIMULATION PARAMETERS
+// =============================================================================
+const DT            = 5e-11;       // Time step (s)
+const TOTAL_STEPS   = 200000;      // Total physics steps (~10 μs of simulation)
+const RING_RADIUS   = 0.10;        // Ring radius (m)
+const CAVITY_ARC    = 0.5;         // RF cavity angular width (rad)
+const CAVITY_OFFSET = Math.PI/2;   // Cavity at top of ring
+const EPSILON       = 1e-12;       // Lorentz factor safety floor
+const CAVITY_LENGTH = 0.01;        // RF cavity effective length (m)
+
+// =============================================================================
+//  STATE
+// =============================================================================
+let simData   = null;   // Pre-computed full trajectory
+let animFrame = null;
+let running   = false;
+let paused    = false;
+let currentFrame = 0;
+
+// DOM
+const bSlider     = document.getElementById('bSlider');
+const rfSlider    = document.getElementById('rfSlider');
+const speedSlider = document.getElementById('speedSlider');
+const relToggle   = document.getElementById('relToggle');
+const runBtn      = document.getElementById('runBtn');
+const resetBtn    = document.getElementById('resetBtn');
+const welcomeEl   = document.getElementById('welcomeScreen');
+const trajBox     = document.getElementById('trajBox');
+const energyBox   = document.getElementById('energyBox');
+const metricsBar  = document.getElementById('metricsBar');
+const speedBadge  = document.getElementById('speedBadge');
+
+// Slider labels
+bSlider.oninput     = () => document.getElementById('bVal').textContent     = parseFloat(bSlider.value).toFixed(1)+' T';
+rfSlider.oninput    = () => document.getElementById('rfVal').textContent    = rfSlider.value+' kV';
+speedSlider.oninput = () => {
+  document.getElementById('speedVal').textContent = speedSlider.value+'x';
+  speedBadge.textContent = speedSlider.value+'x';
+};
+
+// =============================================================================
+//  LORENTZ FACTOR: gamma = 1 / sqrt(1 - v^2/c^2)
+// =============================================================================
+function gamma(vMag) {
+  const beta2 = (vMag / C) ** 2;
+  return 1 / Math.sqrt(Math.max(1 - beta2, EPSILON));
+}
+
+// =============================================================================
+//  RF CAVITY CHECK — is the particle inside the cavity angular region?
+// =============================================================================
+function inRFCavity(x, y) {
+  const angle = Math.atan2(y, x);
+  const r = Math.hypot(x, y);
+  let d = angle - CAVITY_OFFSET;
+  d = ((d + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+  return Math.abs(d) < CAVITY_ARC / 2 && Math.abs(r - RING_RADIUS) < 0.025;
+}
+
+// =============================================================================
+//  EULER-CROMER INTEGRATION — one step
+//
+//  1. Compute v from state
+//  2. Lorentz force: F_mag = q(v × B), F_rf = qE (if in cavity)
+//  3. Update momentum:  p_new = p + F * dt
+//  4. Recover v from p (relativity-aware, iterative)
+//  5. Clamp v < c
+//  6. Update position:  x_new = x + v_new * dt
+// =============================================================================
+function eulerCromerStep(x, y, vx, vy, B, EField, dt, useRel) {
+  const q = PROTON_CHARGE;
+  const m = PROTON_MASS;
+
+  // Current speed and gamma
+  let vMag = Math.hypot(vx, vy);
+  let g = useRel ? gamma(vMag) : 1;
+
+  // Magnetic force: F = q(v × B) with B = (0,0,B)
+  //   Fx = q * vy * B
+  //   Fy = -q * vx * B
+  let Fx = q * vy * B;
+  let Fy = -q * vx * B;
+
+  // RF cavity electric force (tangential kick)
+  if (inRFCavity(x, y)) {
+    Fx += q * EField;
+  }
+
+  // Update momentum: p = gamma * m * v  →  dp = F * dt
+  let px = g * m * vx + Fx * dt;
+  let py = g * m * vy + Fy * dt;
+
+  // Recover velocity from momentum
+  let pMag = Math.hypot(px, py);
+  let vNew;
+  if (useRel) {
+    vNew = pMag / m;
+    for (let i = 0; i < 5; i++) {
+      const gIter = gamma(vNew);
+      vNew = pMag / (gIter * m);
+    }
+    g = gamma(vNew);
+  } else {
+    vNew = pMag / m;
+    g = 1;
+  }
+
+  // Safety clamp: v < 0.9999c
+  const vMax = 0.9999 * C;
+  if (vNew > vMax) {
+    vNew = vMax;
+    g = useRel ? gamma(vMax) : 1;
+    const scale = vMax / (pMag / m + 1e-30);
+    px *= scale;
+    py *= scale;
+    pMag = Math.hypot(px, py);
+  }
+
+  // Velocity components (preserve direction from momentum)
+  const vxNew = pMag > 0 ? vNew * px / pMag : 0;
+  const vyNew = pMag > 0 ? vNew * py / pMag : 0;
+
+  // Update position with NEW velocity (Euler-Cromer hallmark)
+  const xNew = x + vxNew * dt;
+  const yNew = y + vyNew * dt;
+
+  return { x: xNew, y: yNew, vx: vxNew, vy: vyNew, gamma: g, v: vNew };
+}
+
+// =============================================================================
+//  RUN FULL SIMULATION — pre-compute all frames for buttery animation
+// =============================================================================
+function runSimulation(B, E_rfKV, useRel) {
+  const EField = (E_rfKV * 1000) / CAVITY_LENGTH;
+  let x = 0, y = -RING_RADIUS;
+  let vx = 5e6, vy = 0;   // initial v ~ 1.67% c
+
+  const xs  = new Float64Array(TOTAL_STEPS);
+  const ys  = new Float64Array(TOTAL_STEPS);
+  const kes = new Float64Array(TOTAL_STEPS);
+  const gs  = new Float64Array(TOTAL_STEPS);
+  const vps = new Float64Array(TOTAL_STEPS);
+  const ts  = new Float64Array(TOTAL_STEPS);
+
+  // Track revolutions by counting angle crossings
+  let prevAngle = Math.atan2(y, x);
+  let revCount = 0;
+
+  for (let i = 0; i < TOTAL_STEPS; i++) {
+    xs[i]  = x;
+    ys[i]  = y;
+    const vMag = Math.hypot(vx, vy);
+    const g = useRel ? gamma(vMag) : 1;
+    gs[i]  = g;
+    kes[i] = (g - 1) * PROTON_MASS * C * C / MEV;
+    vps[i] = vMag / C * 100;
+    ts[i]  = i * DT;
+
+    // Count revolutions via angle wrapping
+    const angle = Math.atan2(y, x);
+    if (prevAngle > Math.PI * 0.8 && angle < -Math.PI * 0.8) revCount++;
+    prevAngle = angle;
+
+    const step = eulerCromerStep(x, y, vx, vy, B, EField, DT, useRel);
+    x = step.x; y = step.y; vx = step.vx; vy = step.vy;
+  }
+
+  return { x: xs, y: ys, ke: kes, gamma: gs, vel: vps, time: ts, revs: revCount };
+}
+
+// =============================================================================
+//  RENDER — 2D TRAJECTORY CANVAS
+// =============================================================================
+function drawTrajectory(ctx, w, h, data, endIdx, B, useRel) {
+  const dpr = window.devicePixelRatio || 1;
+  ctx.clearRect(0, 0, w, h);
+
+  // Background
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, w, h);
+
+  // Coordinate mapping: ring center at (w/2, h/2), scale factor
+  const margin = 50;
+  const scale = (Math.min(w, h) - margin * 2) / (RING_RADIUS * 2.5);
+  const cx = w / 2, cy = h / 2;
+  const toScreen = (px, py) => [cx + px * scale, cy - py * scale];
+
+  // Reference ring (dashed)
+  ctx.beginPath();
+  ctx.strokeStyle = '#21262d';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 6]);
+  for (let i = 0; i <= 300; i++) {
+    const a = (i / 300) * 2 * Math.PI;
+    const [sx, sy] = toScreen(RING_RADIUS * Math.cos(a), RING_RADIUS * Math.sin(a));
+    i === 0 ? ctx.moveTo(sx, sy) : ctx.lineTo(sx, sy);
+  }
+  ctx.closePath();
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // RF cavity wedge
+  const rfStart = CAVITY_OFFSET - CAVITY_ARC / 2;
+  const rfEnd   = CAVITY_OFFSET + CAVITY_ARC / 2;
+  const rIn = RING_RADIUS - 0.018, rOut = RING_RADIUS + 0.018;
+
+  ctx.beginPath();
+  for (let i = 0; i <= 40; i++) {
+    const a = rfStart + (i / 40) * CAVITY_ARC;
+    const [sx, sy] = toScreen(rIn * Math.cos(a), rIn * Math.sin(a));
+    i === 0 ? ctx.moveTo(sx, sy) : ctx.lineTo(sx, sy);
+  }
+  for (let i = 40; i >= 0; i--) {
+    const a = rfStart + (i / 40) * CAVITY_ARC;
+    const [sx, sy] = toScreen(rOut * Math.cos(a), rOut * Math.sin(a));
+    ctx.lineTo(sx, sy);
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,215,0,0.12)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,215,0,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // RF label
+  const labelAngle = CAVITY_OFFSET;
+  const [lx, ly] = toScreen((RING_RADIUS + 0.035) * Math.cos(labelAngle),
+                              (RING_RADIUS + 0.035) * Math.sin(labelAngle));
+  ctx.fillStyle = 'rgba(255,215,0,0.7)';
+  ctx.font = 'bold 11px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('RF CAVITY', lx, ly);
+
+  // Trajectory — colored by speed using gradient segments
+  const n = Math.min(endIdx, data.x.length);
+  if (n > 1) {
+    const minV = Math.max(data.vel[0], 0.01);
+    const maxV = Math.max(data.vel[n - 1], minV + 0.001);
+
+    for (let i = 1; i < n; i++) {
+      const [x1, y1] = toScreen(data.x[i - 1], data.y[i - 1]);
+      const [x2, y2] = toScreen(data.x[i], data.y[i]);
+
+      // Color: blue (slow) → yellow → red (fast)
+      const t = Math.min((data.vel[i] - minV) / (maxV - minV), 1);
+      const r = Math.round(t < 0.5 ? t * 2 * 255 : 255);
+      const g = Math.round(t < 0.5 ? 100 + t * 2 * 155 : 255 * (1 - (t - 0.5) * 2));
+      const b = Math.round(t < 0.5 ? 255 * (1 - t * 2) : 0);
+      ctx.strokeStyle = `rgba(${r},${g},${b},0.85)`;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+  }
+
+  // Start marker
+  const [sx0, sy0] = toScreen(data.x[0], data.y[0]);
+  ctx.beginPath();
+  ctx.arc(sx0, sy0, 6, 0, 2 * Math.PI);
+  ctx.fillStyle = '#39d353';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Current position marker
+  if (n > 0) {
+    const [sxN, syN] = toScreen(data.x[n - 1], data.y[n - 1]);
+    ctx.beginPath();
+    ctx.arc(sxN, syN, 6, 0, 2 * Math.PI);
+    ctx.fillStyle = '#f85149';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Glow effect on current
+    ctx.beginPath();
+    ctx.arc(sxN, syN, 12, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(248,81,73,0.15)';
+    ctx.fill();
+  }
+
+  // B-field label
+  ctx.fillStyle = '#58a6ff';
+  ctx.font = 'bold 10px system-ui';
+  ctx.textAlign = 'left';
+  ctx.fillText('B ⊙ out of plane', 12, h - 14);
+
+  // Mode label
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'right';
+  ctx.fillText(`${useRel ? 'RELATIVISTIC' : 'CLASSICAL'}  |  B = ${B.toFixed(1)} T`, w - 12, h - 14);
+}
+
+// =============================================================================
+//  RENDER — ENERGY vs TIME CANVAS
+// =============================================================================
+function drawEnergy(ctx, w, h, data, endIdx, useRel) {
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, w, h);
+
+  const n = Math.min(endIdx, data.time.length);
+  if (n < 2) return;
+
+  const pad = { l: 65, r: 20, t: 30, b: 45 };
+  const pw = w - pad.l - pad.r;
+  const ph = h - pad.t - pad.b;
+
+  // Axes ranges
+  const tMax = Math.max(data.time[n - 1] * 1e6, 0.01);
+  const keMax = Math.max(Math.max(...data.ke.subarray(0, n)) * 1.15, 0.001);
+
+  // Grid lines
+  ctx.strokeStyle = '#21262d';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 5; i++) {
+    const gy = pad.t + ph - (i / 5) * ph;
+    ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(pad.l + pw, gy); ctx.stroke();
+  }
+  for (let i = 0; i <= 5; i++) {
+    const gx = pad.l + (i / 5) * pw;
+    ctx.beginPath(); ctx.moveTo(gx, pad.t); ctx.lineTo(gx, pad.t + ph); ctx.stroke();
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px system-ui';
+  ctx.textAlign = 'center';
+  for (let i = 0; i <= 5; i++) {
+    const val = (i / 5 * tMax).toFixed(2);
+    ctx.fillText(val + ' μs', pad.l + (i / 5) * pw, pad.t + ph + 18);
+  }
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 5; i++) {
+    const val = (i / 5 * keMax).toFixed(4);
+    ctx.fillText(val, pad.l - 8, pad.t + ph - (i / 5) * ph + 4);
+  }
+
+  // Axis titles
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Time (μs)', pad.l + pw / 2, h - 6);
+  ctx.save();
+  ctx.translate(14, pad.t + ph / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Kinetic Energy (MeV)', 0, 0);
+  ctx.restore();
+
+  // Gradient fill under curve
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ph);
+  const baseColor = useRel ? '255,107,53' : '88,166,255';
+  grad.addColorStop(0, `rgba(${baseColor},0.3)`);
+  grad.addColorStop(1, `rgba(${baseColor},0.02)`);
+
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t + ph);
+  for (let i = 0; i < n; i++) {
+    const sx = pad.l + (data.time[i] * 1e6 / tMax) * pw;
+    const sy = pad.t + ph - (data.ke[i] / keMax) * ph;
+    ctx.lineTo(sx, sy);
+  }
+  ctx.lineTo(pad.l + (data.time[n - 1] * 1e6 / tMax) * pw, pad.t + ph);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Main line
+  ctx.beginPath();
+  const lineColor = useRel ? '#ff6b35' : '#58a6ff';
+  for (let i = 0; i < n; i++) {
+    const sx = pad.l + (data.time[i] * 1e6 / tMax) * pw;
+    const sy = pad.t + ph - (data.ke[i] / keMax) * ph;
+    i === 0 ? ctx.moveTo(sx, sy) : ctx.lineTo(sx, sy);
+  }
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 2.2;
+  ctx.stroke();
+
+  // Current value dot + label
+  const lastSx = pad.l + (data.time[n - 1] * 1e6 / tMax) * pw;
+  const lastSy = pad.t + ph - (data.ke[n - 1] / keMax) * ph;
+  ctx.beginPath();
+  ctx.arc(lastSx, lastSy, 5, 0, 2 * Math.PI);
+  ctx.fillStyle = lineColor;
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Annotation box
+  const label = data.ke[n - 1].toFixed(4) + ' MeV';
+  ctx.font = 'bold 12px system-ui';
+  const tw = ctx.measureText(label).width + 16;
+  const bx = Math.max(pad.l + 10, lastSx - tw - 30);
+  const by = Math.max(pad.t + 5, lastSy - 28);
+  ctx.fillStyle = '#161b22';
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, tw, 24, 6);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, bx + 8, by + 17);
+
+  // Mode label
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'right';
+  ctx.fillText(useRel ? 'RELATIVISTIC' : 'CLASSICAL', w - pad.r, pad.t + 14);
+}
+
+// =============================================================================
+//  UPDATE METRICS PANEL
+// =============================================================================
+function updateMetrics(data, idx) {
+  const n = Math.min(idx, data.vel.length - 1);
+  document.getElementById('mVel').textContent   = data.vel[n].toFixed(4) + '% of c';
+  document.getElementById('mKE').textContent    = data.ke[n].toFixed(4) + ' MeV';
+  document.getElementById('mGamma').textContent = data.gamma[n].toFixed(8);
+  document.getElementById('mVelD').textContent  = '+' + (data.vel[n] - data.vel[0]).toFixed(4) + '%';
+  document.getElementById('mKED').textContent   = '+' + (data.ke[n] - data.ke[0]).toFixed(4) + ' MeV';
+  document.getElementById('mGammaD').textContent= '+' + (data.gamma[n] - 1).toFixed(8);
+  document.getElementById('mRevs').textContent  = Math.floor(n / (TOTAL_STEPS / Math.max(data.revs, 1)));
+
+  const simTime = n * DT;
+  if (simTime < 1e-6)      document.getElementById('mTime').textContent = (simTime * 1e9).toFixed(1) + ' ns';
+  else if (simTime < 1e-3) document.getElementById('mTime').textContent = (simTime * 1e6).toFixed(2) + ' μs';
+  else                     document.getElementById('mTime').textContent = (simTime * 1e3).toFixed(3) + ' ms';
+}
+
+// =============================================================================
+//  ANIMATION LOOP — requestAnimationFrame for 60fps smoothness
+// =============================================================================
+function animate() {
+  if (!running || paused) return;
+
+  const speed = parseInt(speedSlider.value);
+  const trajCtx = document.getElementById('trajCanvas').getContext('2d');
+  const energyCtx = document.getElementById('energyCanvas').getContext('2d');
+  const trajEl = document.getElementById('trajCanvas');
+  const energyEl = document.getElementById('energyCanvas');
+
+  currentFrame += speed;
+
+  if (currentFrame >= TOTAL_STEPS) {
+    currentFrame = TOTAL_STEPS - 1;
+    running = false;
+    runBtn.style.display = '';
+    resetBtn.style.display = 'none';
+    runBtn.textContent = '▶ Run Simulation';
+  }
+
+  // Resize canvases to match display size (hi-dpi aware)
+  const dpr = window.devicePixelRatio || 1;
+  [trajEl, energyEl].forEach(el => {
+    const rect = el.parentElement.getBoundingClientRect();
+    if (el.width !== Math.round(rect.width * dpr) || el.height !== Math.round(rect.height * dpr)) {
+      el.width  = Math.round(rect.width * dpr);
+      el.height = Math.round(rect.height * dpr);
+      el.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+  });
+
+  const tw = trajEl.width / dpr, th = trajEl.height / dpr;
+  const ew = energyEl.width / dpr, eh = energyEl.height / dpr;
+
+  const B = parseFloat(bSlider.value);
+  const useRel = relToggle.checked;
+
+  drawTrajectory(trajCtx, tw, th, simData, currentFrame, B, useRel);
+  drawEnergy(energyCtx, ew, eh, simData, currentFrame, useRel);
+  updateMetrics(simData, currentFrame);
+
+  if (currentFrame >= TOTAL_STEPS - 1) {
+    updateMetrics(simData, TOTAL_STEPS - 1);
+    return;
+  }
+
+  animFrame = requestAnimationFrame(animate);
+}
+
+// =============================================================================
+//  START / RESET
+// =============================================================================
+runBtn.addEventListener('click', () => {
+  if (running) {
+    // Pause/resume
+    paused = !paused;
+    runBtn.textContent = paused ? '▶ Resume' : '⏸ Pause';
+    if (!paused) animFrame = requestAnimationFrame(animate);
+    return;
+  }
+
+  // Run
+  const B = parseFloat(bSlider.value);
+  const EKV = parseInt(rfSlider.value);
+  const useRel = relToggle.checked;
+
+  welcomeEl.style.display = 'none';
+  trajBox.style.display = '';
+  energyBox.style.display = '';
+  metricsBar.style.display = '';
+  runBtn.textContent = '⏸ Pause';
+  resetBtn.style.display = '';
+  speedBadge.textContent = speedSlider.value + 'x';
+
+  currentFrame = 0;
+  simData = runSimulation(B, EKV, useRel);
+  running = true;
+  paused = false;
+
+  animFrame = requestAnimationFrame(animate);
+});
+
+resetBtn.addEventListener('click', () => {
+  running = false;
+  paused = false;
+  if (animFrame) cancelAnimationFrame(animFrame);
+
+  welcomeEl.style.display = '';
+  trajBox.style.display = 'none';
+  energyBox.style.display = 'none';
+  metricsBar.style.display = 'none';
+  runBtn.style.display = '';
+  resetBtn.style.display = 'none';
+  runBtn.textContent = '▶ Run Simulation';
+
+  // Clear canvases
+  ['trajCanvas', 'energyCanvas'].forEach(id => {
+    const c = document.getElementById(id);
+    c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  });
+});
+</script>
+</body>
+</html>
