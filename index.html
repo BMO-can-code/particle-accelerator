@@ -561,11 +561,14 @@ function animate(timestamp) {
   if (!animRunning) return;
 
   if (!prevTime) prevTime = timestamp;
-  const dt = timestamp - prevTime;
+  let dt = timestamp - prevTime;
   prevTime = timestamp;
 
-  // Advance ~3000 turns per second
-  const turnsPerMs = simData.nTurns / 4000;
+  // Cap dt to prevent jumps when tab is backgrounded
+  dt = Math.min(dt, 50);
+
+  // Advance ~2000 turns per second
+  const turnsPerMs = simData.nTurns / 6000;
   animTurn += Math.max(1, Math.round(dt * turnsPerMs));
   animTurn = Math.min(animTurn, simData.nTurns);
 
