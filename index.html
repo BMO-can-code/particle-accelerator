@@ -77,10 +77,6 @@ main{display:grid;grid-template-columns:1fr 320px;grid-template-rows:1fr 1fr;ove
     <input type="range" id="radSlider" min="10" max="500" step="5" value="50">
   </div>
   <div class="ctrl">
-    <label>B-field (initial) <span id="bVal">0.5 T</span></label>
-    <input type="range" id="bSlider" min="0.01" max="8.0" step="0.01" value="0.5">
-  </div>
-  <div class="ctrl">
     <label>RF Cavity Voltage <span id="rfVal">100 kV</span></label>
     <input type="range" id="rfSlider" min="1" max="1000" step="1" value="100">
   </div>
@@ -93,7 +89,6 @@ main{display:grid;grid-template-columns:1fr 320px;grid-template-rows:1fr 1fr;ove
   <div class="slbl">Physics</div>
   <div class="toggle-row"><label class="toggle"><input type="checkbox" id="togRel" checked><span class="sl"></span></label>Special Relativity</div>
   <div class="toggle-row"><label class="toggle"><input type="checkbox" id="togSyncRad"><span class="sl"></span></label>Synchrotron Radiation</div>
-  <div class="toggle-row"><label class="toggle"><input type="checkbox" id="togBetatron"><span class="sl"></span></label>Betatron Oscillations</div>
 
   <hr class="hr">
   <div class="slbl">Display</div>
@@ -109,17 +104,13 @@ main{display:grid;grid-template-columns:1fr 320px;grid-template-rows:1fr 1fr;ove
   <div class="slbl">Physics Reference</div>
   <div class="info">
     <strong>Synchrotron Principle:</strong><br>
-    <code>R = p / (qB)</code> — fixed orbit radius, B increases with momentum<br><br>
+    <code>R = p / (qB)</code> — fixed orbit, B tracks momentum<br><br>
     <strong>RF Acceleration:</strong><br>
-    <code>ΔE = q × V_rf</code> — energy gain per revolution<br><br>
-    <strong>Cyclotron Frequency:</strong><br>
-    <code>f = qB / (2πγm)</code> — decreases as γ increases<br><br>
-    <strong>Relativistic Limit:</strong><br>
-    <code>E² = (pc)² + (mc²)²</code> — total energy<br>
-    <code>KE = (γ − 1)mc²</code> — kinetic energy<br><br>
+    <code>ΔE = q × V_rf</code> — energy gain per turn<br><br>
+    <strong>Relativistic:</strong><br>
+    <code>γ = 1/√(1−β²)</code>, <code>E²=(pc)²+(mc²)²</code><br><br>
     <strong>Synchrotron Radiation:</strong><br>
-    <code>P = (c₂/2π) × E⁴/(ρ²m⁴)</code> — power radiated<br>
-    Dominant for electrons, negligible for protons
+    <code>P ∝ E⁴/(ρ²m⁴)</code> — dominant for electrons
   </div>
 </aside>
 
@@ -145,210 +136,153 @@ main{display:grid;grid-template-columns:1fr 320px;grid-template-rows:1fr 1fr;ove
 // =============================================================================
 const C = 2.998e8;
 const QE = 1.602e-19;
-const ME = 9.109e-31;    // electron mass kg
-const MP = 1.673e-27;    // proton mass kg
-const ML = 3.086e-25;    // lead ion mass kg
-const MPEV = 938.272;    // proton mass MeV/c²
-const MEEV = 0.511;      // electron mass MeV/c²
-const ML_EV = 193686;    // lead ion mass MeV/c²
-const EV_J = 1.602e-19;
-const MEV_J = 1.602e-13;
+const ME = 9.109e-31;
+const MP = 1.673e-27;
+const ML = 3.086e-25;
+const MPEV = 938.272;
+const MEEV = 0.511;
+const ML_EV = 193686;
 
-// =============================================================================
-//  PARTICLE DATABASE
-// =============================================================================
 const PART = {
-  proton:   { mass_kg: MP, mass_ev: MPEV, charge: 1, name:'Proton',   sym:'p',   col:'#f87171' },
-  electron: { mass_kg: ME, mass_ev: MEEV, charge:-1, name:'Electron', sym:'e⁻',  col:'#60a5fa' },
-  positron: { mass_kg: ME, mass_ev: MEEV, charge: 1, name:'Positron', sym:'e⁺',  col:'#a78bfa' },
+  proton:   { mass_kg: MP, mass_ev: MPEV, charge: 1, name:'Proton',   sym:'p',    col:'#f87171' },
+  electron: { mass_kg: ME, mass_ev: MEEV, charge:-1, name:'Electron', sym:'e⁻',   col:'#60a5fa' },
+  positron: { mass_kg: ME, mass_ev: MEEV, charge: 1, name:'Positron', sym:'e⁺',   col:'#a78bfa' },
   ion:      { mass_kg: ML, mass_ev: ML_EV,charge:54, name:'Lead Ion', sym:'Pb⁵⁴⁺',col:'#fbbf24' },
 };
 
 // =============================================================================
 //  PHYSICS ENGINE
 //
-//  The simulation models a synchrotron accelerator where:
-//    1. Particle circulates in a ring of fixed radius R
-//    2. Dipole magnets provide bending: B = p / (qR)
-//    3. RF cavity adds energy each turn: ΔE = qV_rf
-//    4. Relativistic dynamics: p = γmv, E = γmc²
-//    5. Optional: synchrotron radiation loss, betatron oscillations
+//  Synchrotron: fixed orbit radius R, B increases with momentum.
+//  RF cavity adds energy each turn: ΔE = qV_rf
+//  Synchrotron radiation (electrons): P = c₂ E⁴/(R²m⁴)
 // =============================================================================
-function runSim(pType, R_m, B0_T, V_rf_kV, nTurns, useRel, useSyncRad, useBeta) {
+function runSim(pType, R_m, V_rf_kV, nTurns, useRel, useSyncRad) {
   const p = PART[pType];
-  const V_rf = V_rf_kV * 1000;   // Convert kV to V
+  const V_rf = V_rf_kV * 1000;
   const circumference = 2 * Math.PI * R_m;
 
-  // Initial state
-  // Start with a small fraction of the energy to allow acceleration
-  let E_MeV = p.mass_ev * 1.01;  // Total energy = rest mass × 1.01
+  // Start just above rest mass
+  let E_MeV = p.mass_ev * 1.01;
   let gamma = E_MeV / p.mass_ev;
-  let beta = useRel ? Math.sqrt(1 - 1 / (gamma * gamma)) : 0.01;
-  let p_MeV = gamma * p.mass_ev * beta; // Momentum in MeV/c
+  let beta = useRel ? Math.sqrt(Math.max(1 - 1 / (gamma * gamma), 0)) : 0.01;
+  let p_MeV = gamma * p.mass_ev * beta;
 
-  // B-field at start (from synchrotron condition: R = p/(qB))
-  let B = B0_T;
+  // Storage arrays
+  const KE  = new Float64Array(nTurns);
+  const gam = new Float64Array(nTurns);
+  const bet = new Float64Array(nTurns);
+  const B   = new Float64Array(nTurns);
+  const mom = new Float64Array(nTurns);
 
-  // Storage
-  const KE_arr = new Float64Array(nTurns);
-  const gamma_arr = new Float64Array(nTurns);
-  const beta_arr = new Float64Array(nTurns);
-  const B_arr = new Float64Array(nTurns);
-  const p_arr = new Float64Array(nTurns);
-  const angle_arr = new Float64Array(nTurns); // Azimuthal position
+  for (let t = 0; t < nTurns; t++) {
+    // Record
+    const ke = (gamma - 1) * p.mass_ev;
+    KE[t]  = ke;
+    gam[t] = gamma;
+    bet[t] = beta;
+    mom[t] = p_MeV;
 
-  let angle = 0;
-  let x_beta = 0, px_beta = 0; // Betatron oscillation state
+    // Required B to maintain orbit: B = p/(qR)
+    // p [MeV/c] × 1e6 / (c × q × R) → Tesla
+    B[t] = (p_MeV * 1e6) / (C * Math.abs(p.charge) * R_m);
 
-  // Synchrotron radiation power: P = (c₂/2π) × E⁴/(ρ²m⁴)
-  // c₂ = 8.85e-5 GeV⁴·m⁻²·s⁻¹ for electrons
-  // For protons it's ~10⁻¹³ smaller, negligible
-
-  for (let turn = 0; turn < nTurns; turn++) {
-    // Record state
-    const KE = (gamma - 1) * p.mass_ev;
-    KE_arr[turn] = KE;
-    gamma_arr[turn] = gamma;
-    beta_arr[turn] = beta;
-    B_arr[turn] = B;
-    p_arr[turn] = p_MeV;
-    angle_arr[turn] = angle;
-
-    // --- RF Cavity Energy Gain ---
-    // Particle gains ΔE = q × V_rf per turn
-    // In practice, the phase angle matters, but we use optimal phase (sin(φ) = 1)
-    const dE = Math.abs(p.charge) * V_rf / 1e6; // Convert V to MeV
+    // RF gain
+    const dE = Math.abs(p.charge) * V_rf / 1e6; // MeV
     E_MeV += dE;
 
-    // --- Synchrotron Radiation (electrons only, protons negligible) ---
+    // Synchrotron radiation (electrons)
     if (useSyncRad && (pType === 'electron' || pType === 'positron')) {
-      // Power radiated: P = c₂ E⁴ / (R² m⁴)
-      // Energy loss per turn: ΔE_rad = P × T_rev = P × (2πR/c)
       const E_GeV = E_MeV / 1000;
       const m_GeV = p.mass_ev / 1000;
-      const c2 = 8.846e-5; // GeV⁴ m⁻² s⁻¹ (classical electron radius related)
+      const c2 = 8.846e-5;
       const P_rad = c2 * Math.pow(E_GeV, 4) / (R_m * R_m * Math.pow(m_GeV, 4));
-      const T_rev = circumference / C; // Revolution period in seconds
-      const dE_rad = P_rad * T_rev * 1000; // Convert GeV to MeV
-      E_MeV = Math.max(E_MeV - dE_rad, p.mass_ev * 1.001);
+      const T_rev = circumference / C;
+      E_MeV = Math.max(E_MeV - P_rad * T_rev * 1000, p.mass_ev * 1.001);
     }
 
-    // --- Update kinematics ---
+    // Update kinematics
     gamma = E_MeV / p.mass_ev;
-
     if (useRel) {
       beta = Math.sqrt(Math.max(1 - 1 / (gamma * gamma), 0));
-      p_MeV = gamma * p.mass_ev * beta;
     } else {
-      // Classical: p = mv, KE = 0.5mv²
-      beta = Math.sqrt(2 * KE_arr[turn] / p.mass_ev);
-      p_MeV = beta * p.mass_ev;
+      beta = Math.sqrt(Math.max(2 * ke / p.mass_ev, 0));
       gamma = 1;
     }
-
-    // Safety clamp: beta < 1
-    if (beta >= 1) { beta = 0.9999; gamma = 1 / Math.sqrt(1 - beta * beta); }
-
-    // --- Synchrotron condition: adjust B to maintain orbit radius ---
-    // R = p / (qB)  →  B = p / (qR)
-    // B is in Tesla, p in MeV/c, R in meters
-    // B [T] = p [MeV/c] × 1e6 / (c [m/s] × q [C] × R [m])
-    B = (p_MeV * 1e6) / (C * Math.abs(p.charge) * R_m);
-
-    // --- Betatron oscillations (optional) ---
-    if (useBeta) {
-      // Betatron tune Q: number of oscillations per turn
-      // Typical: Q ≈ 6-20 for modern accelerators
-      const Q = 6.2; // Betatron tune
-      const amplitude = 0.02 * R_m; // 2% of radius
-
-      // Update betatron state (simple harmonic oscillator)
-      const dTheta = 2 * Math.PI / nTurns;
-      x_beta = amplitude * Math.sin(2 * Math.PI * Q * turn / nTurns);
-      px_beta = amplitude * Q * Math.cos(2 * Math.PI * Q * turn / nTurns);
-    }
-
-    // Update angle (position around ring)
-    angle += 2 * Math.PI; // One full turn per step
+    if (beta >= 0.9999) beta = 0.9999;
+    p_MeV = gamma * p.mass_ev * beta;
   }
 
-  return { KE: KE_arr, gamma: gamma_arr, beta: beta_arr, B: B_arr, p: p_arr, angle: angle_arr, nTurns };
+  return { KE, gamma: gam, beta: bet, B, momentum: mom, nTurns, circumference };
 }
 
 // =============================================================================
 //  STATE
 // =============================================================================
 let simData = null;
-let animFrame = null;
 let animTurn = 0;
 let animRunning = false;
+let animFrame = null;
+let prevTime = 0;
 
 const ringCanvas = document.getElementById('ringCanvas');
-const keCanvas = document.getElementById('keCanvas');
-const vgCanvas = document.getElementById('vgCanvas');
-const telePanel = document.getElementById('telePanel');
+const keCanvas   = document.getElementById('keCanvas');
+const vgCanvas   = document.getElementById('vgCanvas');
+const telePanel  = document.getElementById('telePanel');
+const ringCtx    = ringCanvas.getContext('2d');
+const keCtx      = keCanvas.getContext('2d');
+const vgCtx      = vgCanvas.getContext('2d');
 
-// Controls
 const selParticle = document.getElementById('selParticle');
-const radSlider = document.getElementById('radSlider');
-const bSlider = document.getElementById('bSlider');
-const rfSlider = document.getElementById('rfSlider');
-const turnSlider = document.getElementById('turnSlider');
-const runBtn = document.getElementById('runBtn');
-const clrBtn = document.getElementById('clrBtn');
+const radSlider   = document.getElementById('radSlider');
+const rfSlider    = document.getElementById('rfSlider');
+const turnSlider  = document.getElementById('turnSlider');
+const runBtn      = document.getElementById('runBtn');
+const clrBtn      = document.getElementById('clrBtn');
 
-// Labels
-radSlider.oninput = () => document.getElementById('radVal').textContent = radSlider.value + ' m';
-bSlider.oninput = () => document.getElementById('bVal').textContent = parseFloat(bSlider.value).toFixed(2) + ' T';
-rfSlider.oninput = () => document.getElementById('rfVal').textContent = rfSlider.value + ' kV';
+radSlider.oninput  = () => document.getElementById('radVal').textContent  = radSlider.value + ' m';
+rfSlider.oninput   = () => document.getElementById('rfVal').textContent   = rfSlider.value + ' kV';
 turnSlider.oninput = () => document.getElementById('turnVal').textContent = turnSlider.value;
 
+// Safe max for Float64Array
+function arrMax(arr, n) {
+  let m = -Infinity;
+  for (let i = 0; i < n; i++) if (arr[i] > m) m = arr[i];
+  return m;
+}
+
 // =============================================================================
-//  DRAWING — SYNCHROTRON RING
-//
-//  Renders:
-//    - Accelerator ring (circle)
-//    - Dipole magnets (colored blocks around ring)
-//    - RF cavity (golden region)
-//    - Particle position (animated dot)
-//    - Orbit trail (fading path)
-//    - Betatron oscillations (transverse wobble)
+//  DRAW RING
 // =============================================================================
 function drawRing(ctx, w, h) {
-  const dpr = window.devicePixelRatio || 1;
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = '#080c14';
   ctx.fillRect(0, 0, w, h);
 
   const cx = w / 2, cy = h / 2;
-  const R = Math.min(w, h) * 0.32; // Ring radius in pixels
+  const R = Math.min(w, h) * 0.32;
 
-  // --- Draw ring circle ---
+  // Ring circle
   ctx.beginPath();
   ctx.arc(cx, cy, R, 0, 2 * Math.PI);
   ctx.strokeStyle = '#253358';
   ctx.lineWidth = 3;
   ctx.stroke();
 
-  // --- Dipole magnets (8 blocks evenly spaced) ---
+  // Dipole magnets
   if (document.getElementById('togDipole').checked) {
-    const nDipoles = 8;
-    for (let i = 0; i < nDipoles; i++) {
-      const a = (i / nDipoles) * 2 * Math.PI - Math.PI / 2;
-      const mx = cx + R * Math.cos(a);
-      const my = cy + R * Math.sin(a);
-      const len = (2 * Math.PI * R) / (nDipoles * 2.5);
-      const angle = a;
-
+    const nD = 8;
+    for (let i = 0; i < nD; i++) {
+      const a = (i / nD) * 2 * Math.PI - Math.PI / 2;
+      const len = (2 * Math.PI * R) / (nD * 2.5);
       ctx.save();
-      ctx.translate(mx, my);
-      ctx.rotate(angle);
+      ctx.translate(cx + R * Math.cos(a), cy + R * Math.sin(a));
+      ctx.rotate(a);
       ctx.fillStyle = '#1e40af44';
       ctx.strokeStyle = '#3b82f6';
       ctx.lineWidth = 1;
       ctx.fillRect(-len / 2, -8, len, 16);
       ctx.strokeRect(-len / 2, -8, len, 16);
-
       if (document.getElementById('togLabels').checked) {
         ctx.fillStyle = '#60a5fa88';
         ctx.font = '8px monospace';
@@ -359,11 +293,9 @@ function drawRing(ctx, w, h) {
     }
   }
 
-  // --- RF Cavity (golden arc at top) ---
-  const rfAngle = -Math.PI / 2;
-  const rfWidth = 0.15;
+  // RF Cavity (golden arc)
   ctx.beginPath();
-  ctx.arc(cx, cy, R, rfAngle - rfWidth, rfAngle + rfWidth);
+  ctx.arc(cx, cy, R, -Math.PI / 2 - 0.15, -Math.PI / 2 + 0.15);
   ctx.strokeStyle = '#fbbf24';
   ctx.lineWidth = 6;
   ctx.stroke();
@@ -379,108 +311,85 @@ function drawRing(ctx, w, h) {
     ctx.fillText('V = ' + rfSlider.value + ' kV', cx, cy - R - 6);
   }
 
-  // --- Orbit trail ---
-  if (simData && document.getElementById('togTrail').checked) {
-    const nTrail = Math.min(animTurn + 1, simData.nTurns);
-    const maxTrail = 200; // Max trail points
-    const start = Math.max(0, nTrail - maxTrail);
+  // --- Animated particle ---
+  if (simData && animTurn < simData.nTurns && animTurn >= 0) {
+    const color = PART[selParticle.value].col;
 
-    for (let i = start; i < nTrail - 1; i++) {
-      const angle1 = (i / simData.nTurns) * 2 * Math.PI * 3 + angle_arr_offset;
-      const angle2 = ((i + 1) / simData.nTurns) * 2 * Math.PI * 3 + angle_arr_offset;
+    // Draw trail if enabled
+    if (document.getElementById('togTrail').checked && animTurn > 1) {
+      const trailLen = Math.min(animTurn, 300);
+      const start = Math.max(0, animTurn - trailLen);
+      for (let i = start; i < animTurn; i++) {
+        // Each full turn = 2π radians. Show particle orbiting.
+        const angle_i = (i / simData.nTurns) * 2 * Math.PI * 6;
+        const angle_j = ((i + 1) / simData.nTurns) * 2 * Math.PI * 6;
 
-      const r1 = R + (simData.beta[i] > 0.5 ? getBetaOffset(i) : 0);
-      const r2 = R + (simData.beta[i + 1] > 0.5 ? getBetaOffset(i + 1) : 0);
+        const x1 = cx + R * Math.cos(angle_i);
+        const y1 = cy + R * Math.sin(angle_i);
+        const x2 = cx + R * Math.cos(angle_j);
+        const y2 = cy + R * Math.sin(angle_j);
 
-      const x1 = cx + r1 * Math.cos(angle1);
-      const y1 = cy + r1 * Math.sin(angle1);
-      const x2 = cx + r2 * Math.cos(angle2);
-      const y2 = cy + r2 * Math.sin(angle2);
-
-      const alpha = ((i - start) / maxTrail) * 0.6;
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.strokeStyle = PART[selParticle.value].col;
-      ctx.globalAlpha = alpha;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+        const alpha = ((i - start) / trailLen) * 0.7;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
-  }
 
-  // --- Current particle position ---
-  if (simData && animTurn < simData.nTurns) {
-    // Particle position oscillates around the ring
-    const turns_completed = animTurn / simData.nTurns;
-    const currentAngle = turns_completed * 2 * Math.PI * 3 + angle_arr_offset;
-    const betaR = simData.beta[animTurn];
-    const rOffset = document.getElementById('togBetatron').checked
-      ? 8 * Math.sin(6.2 * 2 * Math.PI * animTurn / simData.nTurns) : 0;
-    const pr = R + rOffset;
-
-    const px = cx + pr * Math.cos(currentAngle);
-    const py = cy + pr * Math.sin(currentAngle);
+    // Current particle position
+    const angle = (animTurn / simData.nTurns) * 2 * Math.PI * 6;
+    const px = cx + R * Math.cos(angle);
+    const py = cy + R * Math.sin(angle);
 
     // Glow
-    const grad = ctx.createRadialGradient(px, py, 0, px, py, 15);
-    grad.addColorStop(0, PART[selParticle.value].col + '66');
+    const grad = ctx.createRadialGradient(px, py, 0, px, py, 18);
+    grad.addColorStop(0, color + '88');
     grad.addColorStop(1, 'transparent');
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(px, py, 15, 0, 2 * Math.PI);
+    ctx.arc(px, py, 18, 0, 2 * Math.PI);
     ctx.fill();
 
     // Dot
     ctx.beginPath();
-    ctx.arc(px, py, 4, 0, 2 * Math.PI);
-    ctx.fillStyle = PART[selParticle.value].col;
+    ctx.arc(px, py, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = color;
     ctx.fill();
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 1.5;
     ctx.stroke();
   }
 
-  // --- Scale and labels ---
+  // Labels
   if (document.getElementById('togLabels').checked) {
     ctx.fillStyle = '#475569';
     ctx.font = '10px monospace';
     ctx.textAlign = 'left';
-    ctx.fillText('R = ' + radSlider.value + ' m', 10, h - 10);
-    ctx.fillText('C = ' + (2 * Math.PI * parseInt(radSlider.value)).toFixed(0) + ' m', 10, h - 22);
-
-    // Center label
-    ctx.fillStyle = '#47556988';
-    ctx.font = '9px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('Storage Ring', cx, cy - 4);
-    ctx.fillText('Top View', cx, cy + 8);
+    ctx.fillText('R = ' + radSlider.value + ' m', 10, h - 20);
+    ctx.fillText('C = ' + (2 * Math.PI * parseInt(radSlider.value)).toFixed(0) + ' m', 10, h - 8);
   }
 }
 
-// Helper for orbit offset
-let angle_arr_offset = 0;
-function getBetaOffset(turn) {
-  if (!simData) return 0;
-  return 8 * Math.sin(6.2 * 2 * Math.PI * turn / simData.nTurns);
-}
-
 // =============================================================================
-//  DRAWING — KE vs TURN
+//  DRAW KE vs TURN
 // =============================================================================
 function drawKE(ctx, w, h) {
-  const dpr = window.devicePixelRatio || 1;
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = '#080c14';
   ctx.fillRect(0, 0, w, h);
-
   if (!simData) return;
 
   const pad = {l:55, r:12, t:24, b:32};
   const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
-
   const nDraw = Math.min(animTurn + 1, simData.nTurns);
-  const keMax = Math.max(...simData.KE.subarray(0, nDraw)) * 1.15 || 100;
+  if (nDraw < 1) return;
+
+  const keMax = arrMax(simData.KE, nDraw) * 1.15 || 100;
 
   // Grid
   ctx.strokeStyle = '#1a2340';
@@ -493,8 +402,6 @@ function drawKE(ctx, w, h) {
     ctx.textAlign = 'right';
     ctx.fillText((i / 4 * keMax).toFixed(0) + ' MeV', pad.l - 4, gy + 3);
   }
-
-  // X axis
   ctx.textAlign = 'center';
   ctx.fillText('Turn Number', pad.l + pw / 2, h - 6);
 
@@ -506,54 +413,49 @@ function drawKE(ctx, w, h) {
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   }
   ctx.strokeStyle = '#f87171';
-  ctx.lineWidth = 1.8;
+  ctx.lineWidth = 2;
   ctx.stroke();
 
   // Fill
-  ctx.lineTo(pad.l + ((nDraw - 1) / simData.nTurns) * pw, pad.t + ph);
+  const lastX = pad.l + ((nDraw - 1) / simData.nTurns) * pw;
+  ctx.lineTo(lastX, pad.t + ph);
   ctx.lineTo(pad.l, pad.t + ph);
   ctx.closePath();
-  ctx.fillStyle = '#f8717112';
+  ctx.fillStyle = '#f8717115';
   ctx.fill();
 
-  // Current marker
-  if (nDraw > 0) {
-    const x = pad.l + ((nDraw - 1) / simData.nTurns) * pw;
-    const y = pad.t + ph - (simData.KE[nDraw - 1] / keMax) * ph;
-    ctx.beginPath();
-    ctx.arc(x, y, 4, 0, 2 * Math.PI);
-    ctx.fillStyle = '#f87171';
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
+  // Marker
+  ctx.beginPath();
+  ctx.arc(lastX, pad.t + ph - (simData.KE[nDraw - 1] / keMax) * ph, 4, 0, 2 * Math.PI);
+  ctx.fillStyle = '#f87171';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1;
+  ctx.stroke();
 
-  // Synchrotron radiation annotation
   if (document.getElementById('togSyncRad').checked && (selParticle.value === 'electron' || selParticle.value === 'positron')) {
     ctx.fillStyle = '#fbbf24';
     ctx.font = 'bold 9px monospace';
     ctx.textAlign = 'right';
-    ctx.fillText('Synchrotron Radiation Active', w - pad.r, pad.t + 14);
+    ctx.fillText('⚠ Synchrotron Radiation Active', w - pad.r, pad.t + 14);
   }
 }
 
 // =============================================================================
-//  DRAWING — GAMMA / BETA vs TURN
+//  DRAW GAMMA / BETA vs TURN
 // =============================================================================
 function drawGammaBeta(ctx, w, h) {
-  const dpr = window.devicePixelRatio || 1;
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = '#080c14';
   ctx.fillRect(0, 0, w, h);
-
   if (!simData) return;
 
   const pad = {l:55, r:12, t:24, b:32};
   const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
-
   const nDraw = Math.min(animTurn + 1, simData.nTurns);
-  const gMax = Math.max(...simData.gamma.subarray(0, nDraw)) * 1.15 || 2;
+  if (nDraw < 1) return;
+
+  const gMax = arrMax(simData.gamma, nDraw) * 1.15 || 2;
 
   // Grid
   ctx.strokeStyle = '#1a2340';
@@ -566,7 +468,6 @@ function drawGammaBeta(ctx, w, h) {
     ctx.textAlign = 'right';
     ctx.fillText((i / 4 * gMax).toFixed(1), pad.l - 4, gy + 3);
   }
-
   ctx.textAlign = 'center';
   ctx.fillText('Turn Number', pad.l + pw / 2, h - 6);
 
@@ -578,14 +479,14 @@ function drawGammaBeta(ctx, w, h) {
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   }
   ctx.strokeStyle = '#34d399';
-  ctx.lineWidth = 1.8;
+  ctx.lineWidth = 2;
   ctx.stroke();
 
-  // Beta curve (cyan, scaled to gamma range)
+  // Beta curve (cyan, right axis scaled 0–1)
   ctx.beginPath();
   for (let i = 0; i < nDraw; i++) {
     const x = pad.l + (i / simData.nTurns) * pw;
-    const y = pad.t + ph - (simData.beta[i] * gMax * 0.8 / gMax) * ph;
+    const y = pad.t + ph - simData.beta[i] * ph; // beta ∈ [0,1]
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   }
   ctx.strokeStyle = '#22d3ee';
@@ -595,50 +496,35 @@ function drawGammaBeta(ctx, w, h) {
   ctx.setLineDash([]);
 
   // Legend
-  ctx.fillStyle = '#34d399';
   ctx.font = '9px monospace';
   ctx.textAlign = 'right';
+  ctx.fillStyle = '#34d399';
   ctx.fillText('— γ (gamma)', w - pad.r, pad.t + 12);
   ctx.fillStyle = '#22d3ee';
   ctx.fillText('--- β (v/c)', w - pad.r, pad.t + 24);
 
-  // Current markers
-  if (nDraw > 0) {
-    const x = pad.l + ((nDraw - 1) / simData.nTurns) * pw;
-    const yg = pad.t + ph - (simData.gamma[nDraw - 1] / gMax) * ph;
-    const yb = pad.t + ph - (simData.beta[nDraw - 1] * gMax * 0.8 / gMax) * ph;
-
-    ctx.beginPath(); ctx.arc(x, yg, 3, 0, 2 * Math.PI);
-    ctx.fillStyle = '#34d399'; ctx.fill();
-
-    ctx.beginPath(); ctx.arc(x, yb, 3, 0, 2 * Math.PI);
-    ctx.fillStyle = '#22d3ee'; ctx.fill();
-  }
+  // Markers
+  const lastX = pad.l + ((nDraw - 1) / simData.nTurns) * pw;
+  ctx.beginPath(); ctx.arc(lastX, pad.t + ph - (simData.gamma[nDraw - 1] / gMax) * ph, 3, 0, 2 * Math.PI);
+  ctx.fillStyle = '#34d399'; ctx.fill();
+  ctx.beginPath(); ctx.arc(lastX, pad.t + ph - simData.beta[nDraw - 1] * ph, 3, 0, 2 * Math.PI);
+  ctx.fillStyle = '#22d3ee'; ctx.fill();
 }
 
 // =============================================================================
-//  TELEMETRY PANEL
+//  TELEMETRY
 // =============================================================================
 function updateTele() {
-  if (!simData || animTurn >= simData.nTurns) {
-    telePanel.innerHTML = '';
-    return;
-  }
+  if (!simData || animTurn >= simData.nTurns) { telePanel.innerHTML = ''; return; }
   const i = Math.min(animTurn, simData.nTurns - 1);
   const p = PART[selParticle.value];
-  const v_pct = (simData.beta[i] * 100).toFixed(6);
-  const ke_GeV = (simData.KE[i] / 1000).toFixed(4);
-  const g = simData.gamma[i].toFixed(4);
-  const b_T = simData.B[i].toFixed(3);
-  const mom = (simData.p[i] / 1000).toFixed(4);
-
   telePanel.innerHTML = `
     <span style="color:${p.col}">■</span> <strong>${p.sym}</strong> — Turn ${i}<br>
-    v = <span class="v">${v_pct}%</span> of c<br>
-    KE = <span class="r">${ke_GeV} GeV</span><br>
-    γ = <span class="g">${g}</span><br>
-    p = <span class="v">${mom} GeV/c</span><br>
-    B = <span class="v">${b_T} T</span>
+    v = <span class="v">${(simData.beta[i]*100).toFixed(4)}%</span> of c<br>
+    KE = <span class="r">${(simData.KE[i]/1000).toFixed(4)} GeV</span><br>
+    γ = <span class="g">${simData.gamma[i].toFixed(4)}</span><br>
+    p = <span class="v">${(simData.momentum[i]/1000).toFixed(4)} GeV/c</span><br>
+    B = <span class="v">${simData.B[i].toFixed(4)} T</span>
   `;
 }
 
@@ -649,9 +535,11 @@ function resizeAll() {
   const dpr = window.devicePixelRatio || 1;
   [ringCanvas, keCanvas, vgCanvas].forEach(c => {
     const rect = c.parentElement.getBoundingClientRect();
-    if (c.width !== Math.round(rect.width * dpr) || c.height !== Math.round(rect.height * dpr)) {
-      c.width = Math.round(rect.width * dpr);
-      c.height = Math.round(rect.height * dpr);
+    const newW = Math.round(rect.width * dpr);
+    const newH = Math.round(rect.height * dpr);
+    if (c.width !== newW || c.height !== newH) {
+      c.width = newW;
+      c.height = newH;
       c.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
     }
   });
@@ -660,24 +548,33 @@ function resizeAll() {
 function renderFrame() {
   resizeAll();
   const dpr = window.devicePixelRatio || 1;
-
-  drawRing(ringCanvas.getContext('2d'), ringCanvas.width / dpr, ringCanvas.height / dpr);
-  drawKE(keCanvas.getContext('2d'), keCanvas.width / dpr, keCanvas.height / dpr);
-  drawGammaBeta(vgCanvas.getContext('2d'), vgCanvas.width / dpr, vgCanvas.height / dpr);
+  drawRing(ringCtx, ringCanvas.width / dpr, ringCanvas.height / dpr);
+  drawKE(keCtx, keCanvas.width / dpr, keCanvas.height / dpr);
+  drawGammaBeta(vgCtx, vgCanvas.width / dpr, vgCanvas.height / dpr);
   updateTele();
 }
 
 // =============================================================================
-//  ANIMATION
+//  ANIMATION — time-based, not frame-based
 // =============================================================================
-function animate() {
+function animate(timestamp) {
   if (!animRunning) return;
-  animTurn += Math.max(1, Math.floor(simData.nTurns / 2000)); // Speed
+
+  if (!prevTime) prevTime = timestamp;
+  const dt = timestamp - prevTime;
+  prevTime = timestamp;
+
+  // Advance ~3000 turns per second
+  const turnsPerMs = simData.nTurns / 4000;
+  animTurn += Math.max(1, Math.round(dt * turnsPerMs));
   animTurn = Math.min(animTurn, simData.nTurns);
+
   renderFrame();
+
   if (animTurn >= simData.nTurns) {
     animRunning = false;
     runBtn.textContent = '▶ Run Acceleration';
+    prevTime = 0;
     return;
   }
   animFrame = requestAnimationFrame(animate);
@@ -691,22 +588,22 @@ runBtn.addEventListener('click', () => {
     animRunning = false;
     cancelAnimationFrame(animFrame);
     runBtn.textContent = '▶ Run Acceleration';
+    prevTime = 0;
     return;
   }
 
   simData = runSim(
     selParticle.value,
     parseFloat(radSlider.value),
-    parseFloat(bSlider.value),
     parseFloat(rfSlider.value),
     parseInt(turnSlider.value),
     document.getElementById('togRel').checked,
-    document.getElementById('togSyncRad').checked,
-    document.getElementById('togBetatron').checked
+    document.getElementById('togSyncRad').checked
   );
 
   animTurn = 0;
   animRunning = true;
+  prevTime = 0;
   runBtn.textContent = '⏸ Pause';
   animFrame = requestAnimationFrame(animate);
 });
@@ -716,6 +613,7 @@ clrBtn.addEventListener('click', () => {
   cancelAnimationFrame(animFrame);
   simData = null;
   animTurn = 0;
+  prevTime = 0;
   runBtn.textContent = '▶ Run Acceleration';
   telePanel.innerHTML = '';
   renderFrame();
