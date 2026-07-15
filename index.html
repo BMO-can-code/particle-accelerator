@@ -222,8 +222,6 @@ function runSim(pType, R_m, V_rf_kV, nTurns, useRel, useSyncRad) {
 let simData = null;
 let animTurn = 0;
 let animRunning = false;
-let animFrame = null;
-let prevTime = 0;
 
 const ringCanvas = document.getElementById('ringCanvas');
 const keCanvas   = document.getElementById('keCanvas');
@@ -555,32 +553,25 @@ function renderFrame() {
 }
 
 // =============================================================================
-//  ANIMATION — time-based, not frame-based
+//  ANIMATION — setInterval (not rAF, which gets throttled in background tabs)
 // =============================================================================
-function animate(timestamp) {
+let animInterval = null;
+
+function animStep() {
   if (!animRunning) return;
 
-  if (!prevTime) prevTime = timestamp;
-  let dt = timestamp - prevTime;
-  prevTime = timestamp;
-
-  // Cap dt to prevent jumps when tab is backgrounded
-  dt = Math.min(dt, 50);
-
-  // Advance ~2000 turns per second
-  const turnsPerMs = simData.nTurns / 6000;
-  animTurn += Math.max(1, Math.round(dt * turnsPerMs));
-  animTurn = Math.min(animTurn, simData.nTurns);
+  // Advance a fixed number of turns per tick
+  const turnsPerTick = Math.max(1, Math.ceil(simData.nTurns / 3000));
+  animTurn = Math.min(animTurn + turnsPerTick, simData.nTurns);
 
   renderFrame();
 
   if (animTurn >= simData.nTurns) {
     animRunning = false;
+    clearInterval(animInterval);
+    animInterval = null;
     runBtn.textContent = '▶ Run Acceleration';
-    prevTime = 0;
-    return;
   }
-  animFrame = requestAnimationFrame(animate);
 }
 
 // =============================================================================
@@ -589,9 +580,9 @@ function animate(timestamp) {
 runBtn.addEventListener('click', () => {
   if (animRunning) {
     animRunning = false;
-    cancelAnimationFrame(animFrame);
+    clearInterval(animInterval);
+    animInterval = null;
     runBtn.textContent = '▶ Run Acceleration';
-    prevTime = 0;
     return;
   }
 
@@ -606,17 +597,16 @@ runBtn.addEventListener('click', () => {
 
   animTurn = 0;
   animRunning = true;
-  prevTime = 0;
   runBtn.textContent = '⏸ Pause';
-  animFrame = requestAnimationFrame(animate);
+  animInterval = setInterval(animStep, 16);
 });
 
 clrBtn.addEventListener('click', () => {
   animRunning = false;
-  cancelAnimationFrame(animFrame);
+  clearInterval(animInterval);
+  animInterval = null;
   simData = null;
   animTurn = 0;
-  prevTime = 0;
   runBtn.textContent = '▶ Run Acceleration';
   telePanel.innerHTML = '';
   renderFrame();
