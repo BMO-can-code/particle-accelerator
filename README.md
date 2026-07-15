@@ -1,6 +1,6 @@
 # Synchrotron — Particle Accelerator Simulator
 
-Computational simulation of a synchrotron particle accelerator demonstrating the fundamental principles of beam acceleration: the synchrotron condition (fixed orbit radius with increasing magnetic field), RF cavity energy injection, relativistic kinematics, and optional synchrotron radiation and betatron oscillations.
+Computational simulation of a synchrotron particle accelerator demonstrating the fundamental principles of beam acceleration: the synchrotron condition (fixed orbit radius with increasing magnetic field), RF cavity energy injection, relativistic kinematics, and optional synchrotron radiation.
 
 **[→ Live Simulation](https://particle-accelerator.vercel.app)** | **[GitHub](https://github.com/BMO-can-code/particle-accelerator)**
 
@@ -81,16 +81,6 @@ where `c₂ = 8.85 × 10⁻⁵ GeV⁴ m⁻² s⁻¹`, `E` is total energy, `ρ` 
 - Proton synchrotrons (like LHC) have negligible radiation loss
 - Synchrotron light sources deliberately use electron radiation for experiments
 
-### 6. Betatron Oscillations (Optional)
-
-Particles oscillate transversely about the ideal orbit due to focusing forces from quadrupole magnets:
-
-```
-x(s) = A × cos(Q × 2πs/C + φ₀)
-```
-
-where `Q` is the **betatron tune** (oscillations per turn), `A` is the amplitude, and `C` is the circumference. The tune must be irrational to avoid resonances that blow up the beam.
-
 ---
 
 ## Detector/Accelerator Parameters
@@ -101,7 +91,6 @@ where `Q` is the **betatron tune** (oscillations per turn), `A` is the amplitude
 | Circumference | C | 2πR | ~314 m at R=50m |
 | Initial B-field | B₀ | 0.01–8 T | LHC: 0.5 T injection, 8.3 T top |
 | RF voltage | V_rf | 1–1000 kV | LHC: 16 MV total (4 cavities) |
-| Betatron tune | Q | 6.2 | Typical: 6–20 |
 | Synchrotron radiation | c₂ | 8.85e-5 | For electrons |
 
 ## Features
@@ -111,7 +100,6 @@ where `Q` is the **betatron tune** (oscillations per turn), `A` is the amplitude
 - **Relativistic dynamics** — full energy-momentum relation, Lorentz factor, velocity
 - **RF acceleration** — adjustable voltage, shows energy gain per turn
 - **Synchrotron radiation** — correct E⁴/m⁴ scaling, dominant for electrons
-- **Betatron oscillations** — transverse motion with adjustable tune
 - **Live plots** — KE vs turn, γ and β vs turn
 - **Telemetry** — velocity, energy, gamma, momentum, B-field in real-time
 
@@ -128,8 +116,6 @@ This simulator demonstrates the core principles of LHC operation:
 3. **Relativistic limitation** — The plot of γ vs turns shows why higher energies require exponentially more turns: each RF kick adds a fixed ΔE, but the total energy grows, so the fractional gain decreases.
 
 4. **Synchrotron radiation** — The E⁴/m⁴ scaling explains why the LHC accelerates protons (m = 938 MeV) rather than electrons (m = 0.511 MeV) to achieve higher energies. Electron circular colliders (LEP, future FCC-ee) face enormous radiation losses.
-
-5. **Betatron oscillations** — The transverse motion models the betatron focusing that keeps the beam stable. The tune Q must avoid integer and half-integer resonances.
 
 These are the same principles tested in CERN accelerator physics interviews and used daily in LHC operation.
 
