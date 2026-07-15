@@ -1,6 +1,6 @@
-# Particle Accelerator — Relativistic Beam Dynamics Simulator
+# Synchrotron — Particle Accelerator Simulator
 
-Computational simulation of proton beam dynamics in a circular particle accelerator, implementing relativistic kinematics under Lorentz force and RF cavity acceleration. Models core principles of accelerator physics relevant to LHC beam operation.
+Computational simulation of a synchrotron particle accelerator demonstrating the fundamental principles of beam acceleration: the synchrotron condition (fixed orbit radius with increasing magnetic field), RF cavity energy injection, relativistic kinematics, and optional synchrotron radiation and betatron oscillations.
 
 **[→ Live Simulation](https://particle-accelerator.vercel.app)** | **[GitHub](https://github.com/BMO-can-code/particle-accelerator)**
 
@@ -8,86 +8,140 @@ Computational simulation of proton beam dynamics in a circular particle accelera
 
 ## Physics Model
 
-### Relativistic Kinematics
+### 1. The Synchrotron Principle
 
-The proton's relativistic momentum is updated at each integration step:
-
-```
-p_new = p_old + F_total · dt
-v     = p / (γ · m)
-γ     = 1 / √(1 − v²/c²)
-```
-
-Unlike classical `F = ma`, force changes **momentum** directly. Velocity is recovered from momentum via the Lorentz factor γ, which naturally enforces the speed-of-light limit: as v → c, γ → ∞, requiring infinite energy for further acceleration.
-
-### Lorentz Force — Magnetic Bending
-
-A uniform magnetic field **B** perpendicular to the orbital plane provides centripetal bending via the cross product:
+A synchrotron maintains a **fixed orbit radius** by increasing the magnetic field as the particle gains energy. The bending radius is:
 
 ```
-F = q(v × B)
-F_x = q · v_y · B_z
-F_y = −q · v_x · B_z
+R = p / (q × B)
 ```
 
-This force is always perpendicular to velocity — it bends the trajectory without changing speed. The cyclotron radius `R = γmv / (qB)` grows with γ, demonstrating why stronger magnets are required at higher beam energies (the fundamental design constraint of the LHC).
+where `p` is the relativistic momentum, `q` is the particle charge, and `B` is the dipole magnetic field. As energy increases, `B` must increase proportionally to keep `R` constant — this is the defining principle of a synchrotron (as opposed to a cyclotron where `B` is fixed and `R` grows).
 
-### RF Cavity Acceleration
-
-A localized electric field region models the RF cavity. When the proton enters the cavity angular region:
-
+Rearranging for the required field:
 ```
-F_rf = q · E_field (tangential)
-ΔKE  = q · V_rf    (energy gain per revolution)
+B [T] = p [MeV/c] × 10⁶ / (c × q × R)
 ```
 
-This is the same mechanism by which the LHC's 400 MHz cavities accelerate protons from injection (450 GeV) to collision energy (6.5 TeV) over ~10 million revolutions.
+This is how the LHC operates: 1,232 dipole magnets ramp from 0.5 T at injection to 8.3 T at top energy (7 TeV), maintaining the 26.7 km ring radius.
 
-### Symplectic Integration — Euler-Cromer Method
+### 2. RF Cavity Acceleration
 
-The equations of motion are integrated using the **Euler-Cromer method**, a symplectic integrator:
+Each revolution through the RF cavity adds energy:
 
-1. Update momentum: `p_{n+1} = p_n + F(x_n, v_n) · Δt`
-2. Recover velocity: `v_{n+1} = p_{n+1} / (γ_{n+1} · m)`
-3. Update position: `x_{n+1} = x_n + v_{n+1} · Δt`
+```
+ΔE = q × V_rf
+```
 
-Unlike standard Euler (which updates v then x using the same timestep), Euler-Cromer uses the **updated velocity** for position. This semi-implicit scheme is symplectic — it conserves a shadow Hamiltonian, preventing the artificial energy drift that makes standard Euler unsuitable for long accelerator simulations.
+where `V_rf` is the peak RF voltage. In the LHC, four RF cavities per beam provide 16 MV total, adding 6.4 MeV per turn at 400 MHz. Over ~10 million revolutions, this accelerates protons from 450 GeV to 6.5 TeV.
 
-## Numerical Parameters
+The RF frequency must match the revolution frequency times a harmonic number `h`:
+```
+f_rf = h × f_rev = h × c / (2πR × β)
+```
 
-| Parameter | Value | Justification |
-|-----------|-------|---------------|
-| Time step Δt | 5 × 10⁻¹¹ s | Resolves cyclotron frequency at B = 1 T |
-| Total steps | 200,000 | ~10 μs simulation time |
-| Safety clamp | v < 0.9999c | Prevents numerical超光速 from rounding |
-| Lorentz floor | ε = 10⁻¹² | Prevents division by zero at ultra-relativistic speeds |
-| Iterative solver | 5 fixed-point iterations | Recovers v from p = γ(v)mv |
+This ensures the particle sees the same accelerating field each turn — the principle of **phase stability**.
+
+### 3. Relativistic Kinematics
+
+At relativistic speeds, classical mechanics fails. The simulation uses:
+
+```
+E² = (pc)² + (mc²)²     — energy-momentum relation
+γ = E / (mc²)            — Lorentz factor
+β = √(1 − 1/γ²)         — velocity as fraction of c
+p = γmv = γβmc            — relativistic momentum
+KE = (γ − 1)mc²          — kinetic energy
+```
+
+As `v → c`, `γ → ∞` and the energy grows without bound. The kinetic energy per RF turn becomes a smaller fraction of the total energy, explaining why acceleration becomes progressively harder at high energies.
+
+### 4. Cyclotron Frequency (Relativistic)
+
+The revolution frequency decreases as `γ` increases:
+
+```
+f_rev = cβ / (2πR)
+```
+
+In a cyclotron (fixed `B`), this means the particle falls out of sync with the RF — the fundamental limitation that necessitates the synchrotron design.
+
+### 5. Synchrotron Radiation (Electrons)
+
+Charged particles radiate electromagnetic energy when accelerated (curved in a magnetic field):
+
+```
+P = (c₂/2π) × E⁴ / (ρ² × m⁴)
+```
+
+where `c₂ = 8.85 × 10⁻⁵ GeV⁴ m⁻² s⁻¹`, `E` is total energy, `ρ` is bending radius, and `m` is particle mass.
+
+**Critical mass dependence:** `P ∝ 1/m⁴`. Electrons (m = 0.511 MeV) radiate ~10¹³ times more than protons (m = 938 MeV) at the same energy. This is why:
+- Electron synchrotrons need massive RF power to compensate radiation loss
+- Proton synchrotrons (like LHC) have negligible radiation loss
+- Synchrotron light sources deliberately use electron radiation for experiments
+
+### 6. Betatron Oscillations (Optional)
+
+Particles oscillate transversely about the ideal orbit due to focusing forces from quadrupole magnets:
+
+```
+x(s) = A × cos(Q × 2πs/C + φ₀)
+```
+
+where `Q` is the **betatron tune** (oscillations per turn), `A` is the amplitude, and `C` is the circumference. The tune must be irrational to avoid resonances that blow up the beam.
+
+---
+
+## Detector/Accelerator Parameters
+
+| Parameter | Symbol | Value | Notes |
+|-----------|--------|-------|-------|
+| Ring radius | R | 10–500 m | User adjustable |
+| Circumference | C | 2πR | ~314 m at R=50m |
+| Initial B-field | B₀ | 0.01–8 T | LHC: 0.5 T injection, 8.3 T top |
+| RF voltage | V_rf | 1–1000 kV | LHC: 16 MV total (4 cavities) |
+| Betatron tune | Q | 6.2 | Typical: 6–20 |
+| Synchrotron radiation | c₂ | 8.85e-5 | For electrons |
 
 ## Features
 
-- Classical vs. Relativistic physics toggle — compare Newtonian and Einsteinian dynamics
-- Adjustable magnetic field (0.1–5 T) and RF cavity voltage (10–500 kV)
-- Real-time telemetry: velocity (% of c), kinetic energy (MeV), Lorentz factor γ
-- Color-coded trajectory visualization (blue → red = accelerating)
-- Kinetic energy vs. time plot showing energy accumulation per revolution
-- 60fps Canvas rendering with 1×–100× playback speed
+- **Four particle types** — proton, electron, positron, lead ion with correct masses and charges
+- **Synchrotron condition** — B-field automatically adjusts to maintain constant orbit radius
+- **Relativistic dynamics** — full energy-momentum relation, Lorentz factor, velocity
+- **RF acceleration** — adjustable voltage, shows energy gain per turn
+- **Synchrotron radiation** — correct E⁴/m⁴ scaling, dominant for electrons
+- **Betatron oscillations** — transverse motion with adjustable tune
+- **Live plots** — KE vs turn, γ and β vs turn
+- **Telemetry** — velocity, energy, gamma, momentum, B-field in real-time
 
-## Significance to Accelerator Physics
+---
 
-This simulator demonstrates the core computational challenges of beam dynamics modeling:
+## Significance to CERN Accelerator Physics
 
-- **Relativistic momentum tracking** — the same formulation used in beam optics codes (MAD-X, COMSOL)
-- **Energy conservation verification** — symplectic integration prevents unphysical energy gain/loss
-- **RF synchronization** — cavity field timing relative to particle arrival (phase stability)
-- **Magnetic rigidity** — the relationship between B-field strength and beam momentum that dictates magnet design
+This simulator demonstrates the core principles of LHC operation:
 
-These principles directly underpin LHC operation, where 2808 bunches of protons circulate at 99.9999991% of c, requiring superconducting dipole magnets at 8.3 T and RF cavities at 400 MHz.
+1. **Synchrotron design** — The same R = p/(qB) constraint that determines LHC magnet strength. The 1,232 NbTi dipole magnets must track the beam energy from injection to collision.
+
+2. **RF acceleration** — The LHC's 400 MHz superconducting cavities provide the same ΔE = qV_rf per turn. Phase stability keeps the 2808 bunches synchronized over millions of revolutions.
+
+3. **Relativistic limitation** — The plot of γ vs turns shows why higher energies require exponentially more turns: each RF kick adds a fixed ΔE, but the total energy grows, so the fractional gain decreases.
+
+4. **Synchrotron radiation** — The E⁴/m⁴ scaling explains why the LHC accelerates protons (m = 938 MeV) rather than electrons (m = 0.511 MeV) to achieve higher energies. Electron circular colliders (LEP, future FCC-ee) face enormous radiation losses.
+
+5. **Betatron oscillations** — The transverse motion models the betatron focusing that keeps the beam stable. The tune Q must avoid integer and half-integer resonances.
+
+These are the same principles tested in CERN accelerator physics interviews and used daily in LHC operation.
+
+---
 
 ## References
 
 - Lee, S.Y. *Accelerator Physics* (World Scientific, 2019)
 - Edwards & Syphers, *An Introduction to the Physics of High Energy Accelerators* (Wiley, 1993)
+- Wille, *The Physics of Particle Accelerators* (Oxford, 2000)
 - CERN Accelerator School: [CAS](https://cas.web.cern.ch)
+- LHC Design Report, CERN-2004-003
 
 ## License
 
