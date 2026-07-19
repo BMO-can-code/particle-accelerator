@@ -3,556 +3,388 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Synchrotron — Particle Accelerator Simulator</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<title>Particle Accelerator — Synchrotron Physics</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#080c14;--s1:#0f1729;--s2:#1a2340;--bd:#253358;--tx:#e0e7ff;--mt:#7b8db8;--ac:#60a5fa;--gr:#34d399;--rd:#f87171;--gd:#fbbf24;--cy:#22d3ee;--pk:#f472b6;--or:#fb923c}
 body{background:var(--bg);color:var(--tx);font-family:'JetBrains Mono','SF Mono','Fira Code',monospace;overflow:hidden;height:100vh}
-.app{display:grid;grid-template-columns:290px 1fr;grid-template-rows:52px 1fr;height:100vh}
-header{grid-column:1/-1;background:var(--s1);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:12px}
-header h1{font-size:1.05rem;font-weight:600}
-header .tag{background:var(--ac);color:#000;font-size:0.58rem;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase}
-aside{background:var(--s1);border-right:1px solid var(--bd);padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
-.slbl{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--mt)}
-.ctrl{display:flex;flex-direction:column;gap:2px}
-.ctrl label{font-size:0.75rem;color:var(--mt);display:flex;justify-content:space-between}
-.ctrl label span{color:var(--ac);font-weight:600}
-select,input[type=range]{width:100%}
-select{background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:5px;padding:6px 8px;font-size:0.78rem;font-family:inherit}
-select:focus{outline:none;border-color:var(--ac)}
-input[type=range]{-webkit-appearance:none;height:4px;border-radius:2px;background:var(--s2);outline:none;margin:3px 0}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--ac);cursor:pointer;border:2px solid var(--s1)}
-.toggle-row{display:flex;align-items:center;gap:7px;font-size:0.75rem;color:var(--mt)}
-.toggle{position:relative;width:34px;height:18px;cursor:pointer;flex-shrink:0}
-.toggle input{opacity:0;width:0;height:0}
-.toggle .sl{position:absolute;inset:0;background:var(--s2);border-radius:9px;transition:0.2s}
-.toggle .sl:before{content:'';position:absolute;width:12px;height:12px;left:3px;top:3px;background:#475569;border-radius:50%;transition:0.2s}
-.toggle input:checked+.sl{background:var(--ac)}
-.toggle input:checked+.sl:before{transform:translateX(16px);background:#fff}
-.btn{width:100%;padding:9px;border:none;border-radius:6px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:0.12s}
-.btn-go{background:var(--ac);color:#000}
-.btn-go:hover{background:#93c5fd}
-.btn-clr{background:transparent;border:1px solid var(--bd);color:var(--mt)}
-.btn-clr:hover{border-color:var(--ac);color:var(--ac)}
-.hr{border:none;border-top:1px solid var(--bd);margin:2px 0}
-.info{background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:8px;font-size:0.68rem;line-height:1.55;color:var(--mt)}
-.info strong{color:var(--tx)}
-.info code{color:var(--ac);font-size:0.66rem}
-main{display:grid;grid-template-columns:1fr 320px;grid-template-rows:1fr 1fr;overflow:hidden}
+.app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:44px 1fr;height:100vh}
+header{grid-column:1/-1;background:var(--s1);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 16px;gap:10px}
+header h1{font-size:13px;font-weight:700;color:var(--ac);letter-spacing:1px}
+header .tag{font-size:9px;padding:2px 7px;border:1px solid var(--bd);color:var(--mt);border-radius:3px;text-transform:uppercase;letter-spacing:1px}
+header .badge{margin-left:auto;font-size:9px;padding:2px 7px;border:1px solid var(--bd);border-radius:3px;color:var(--gr);text-transform:uppercase;letter-spacing:1px}
+aside{background:var(--s1);border-right:1px solid var(--bd);padding:8px;overflow-y:auto;display:flex;flex-direction:column;gap:5px}
+aside::-webkit-scrollbar{width:3px}aside::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+.cg{border:1px solid var(--bd);border-radius:4px;padding:5px 7px;background:rgba(255,255,255,.008)}
+.cg h3{font-size:8px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ac);margin-bottom:3px}
+.cr{margin-bottom:2px}.cr:last-child{margin-bottom:0}
+.cr label{display:flex;justify-content:space-between;font-size:9px;color:var(--mt)}
+.cr label span{color:var(--ac);font-weight:600}
+input[type=range]{width:100%;-webkit-appearance:none;height:3px;background:var(--s2);border-radius:2px;cursor:pointer;outline:none;border:none;margin-top:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:var(--ac);cursor:pointer;border:2px solid var(--s1)}
+select{width:100%;background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:3px;padding:3px 5px;font-size:9px;font-family:inherit}
+.tr{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--mt)}
+.tg{position:relative;width:28px;height:14px;cursor:pointer;flex-shrink:0}
+.tg input{opacity:0;width:0;height:0}
+.tg .sl{position:absolute;inset:0;background:var(--s2);border-radius:7px;transition:.2s}
+.tg .sl:before{content:'';position:absolute;width:9px;height:9px;left:2px;top:2px;background:#475569;border-radius:50%;transition:.2s}
+.tg input:checked+.sl{background:var(--ac)}
+.tg input:checked+.sl:before{transform:translateX(14px);background:#fff}
+.btn{width:100%;padding:6px;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;transition:.12s}
+.btn-go{background:var(--ac);color:#000}.btn-go:hover{background:#93c5fd}
+.btn-clr{background:transparent;border:1px solid var(--bd);color:var(--mt)}.btn-clr:hover{border-color:var(--ac);color:var(--ac)}
+.fb{background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.15);border-radius:4px;padding:5px 7px;font-size:8px;color:var(--mt);line-height:1.45}
+.fb .eq{color:var(--tx);font-size:9px}
+.main-grid{display:grid;grid-template-columns:1fr 280px;grid-template-rows:1fr 1fr;overflow:hidden}
 .ring-box{grid-row:1/3;border-right:1px solid var(--bd);position:relative;overflow:hidden}
 .plot-box{position:relative;border-bottom:1px solid var(--bd);overflow:hidden}
 .plot-box:last-child{border-bottom:none}
 canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%}
-.ptitle{position:absolute;top:6px;left:10px;font-size:0.68rem;font-weight:600;color:var(--mt);text-transform:uppercase;letter-spacing:0.05em;pointer-events:none;z-index:2}
-.telemetry{position:absolute;top:8px;right:10px;background:rgba(15,23,41,0.92);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;font-size:0.68rem;line-height:1.7;pointer-events:none;z-index:2}
-.telemetry .v{color:var(--ac);font-weight:600}
-.telemetry .g{color:var(--gr)}
-.telemetry .r{color:var(--rd)}
+.ptitle{position:absolute;top:4px;left:8px;font-size:8px;font-weight:600;color:var(--mt);text-transform:uppercase;letter-spacing:.5px;pointer-events:none;z-index:2}
+.tele{position:absolute;top:5px;right:6px;background:rgba(15,23,41,.93);border:1px solid var(--bd);border-radius:4px;padding:5px 7px;font-size:8px;line-height:1.65;pointer-events:none;z-index:2}
+.tele .v{color:var(--ac);font-weight:600}.tele .g{color:var(--gr)}.tele .r{color:var(--rd)}.tele .y{color:var(--gd)}
 </style>
 </head>
 <body>
 <div class="app">
 <header>
-  <h1>⚡ Synchrotron Accelerator</h1>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+  <h1>SYNCHROTRON ACCELERATOR</h1>
   <span class="tag">Accelerator Physics</span>
   <span class="badge">Made by Mayank</span>
 </header>
-
 <aside>
-  <div class="slbl">Particle</div>
-  <div class="ctrl">
-    <select id="selParticle">
-      <option value="proton">Proton — 938.3 MeV/c²</option>
+  <div class="cg">
+    <h3>Particle</h3>
+    <select id="selPart">
+      <option value="proton">Proton — 938.272 MeV/c²</option>
       <option value="electron">Electron — 0.511 MeV/c²</option>
       <option value="positron">Positron — 0.511 MeV/c²</option>
-      <option value="ion">Lead Ion — 193,686 MeV/c²</option>
+      <option value="lead">Lead-208 Ion — 193,686 MeV/c²</option>
+      <option value="carbon">Carbon-12 Ion — 11,178 MeV/c²</option>
     </select>
   </div>
-
-  <hr class="hr">
-  <div class="slbl">Accelerator</div>
-  <div class="ctrl">
-    <label>Ring Radius <span id="radVal">50 m</span></label>
-    <input type="range" id="radSlider" min="10" max="500" step="5" value="50">
+  <div class="cg">
+    <h3>Preset</h3>
+    <select id="selPreset">
+      <option value="custom">Custom</option>
+      <option value="lhc" selected>LHC (CERN)</option>
+      <option value="tevatron">Tevatron (Fermilab)</option>
+      <option value="hera">HERA (DESY)</option>
+      <option value="lep">LEP (CERN)</option>
+      <option value="rhs">RHIC (BNL)</option>
+      <option value="sis18">SIS18 (GSI)</option>
+    </select>
   </div>
-  <div class="ctrl">
-    <label>RF Cavity Voltage <span id="rfVal">100 kV</span></label>
-    <input type="range" id="rfSlider" min="1" max="1000" step="1" value="100">
+  <div class="cg">
+    <h3>Parameters</h3>
+    <div class="cr"><label>Beam Energy <span id="vEnergy">6500 GeV</span></label><input type="range" id="sEnergy" min="1" max="14000" step="1" value="6500"></div>
+    <div class="cr"><label>Ring Radius <span id="vRadius">2804 m</span></label><input type="range" id="sRadius" min="10" max="5000" step="1" value="2804"></div>
+    <div class="cr"><label>RF Voltage <span id="vRF">16 MV</span></label><input type="range" id="sRF" min="1" max="200" step="1" value="16"></div>
+    <div class="cr"><label>Harmonic Number <span id="vH">35640</span></label><input type="range" id="sH" min="1" max="100000" step="1" value="35640"></div>
+    <div class="cr"><label>Speed <span id="vSpd">100 t/f</span></label><input type="range" id="sSpd" min="1" max="500" step="1" value="100"></div>
   </div>
-  <div class="ctrl">
-    <label>Number of Turns <span id="turnVal">500</span></label>
-    <input type="range" id="turnSlider" min="50" max="5000" step="50" value="500">
+  <div class="cg">
+    <h3>Physics</h3>
+    <div class="tr"><label class="tg"><input type="checkbox" id="togRel" checked><span class="sl"></span></label>Special Relativity</div>
+    <div class="tr"><label class="tg"><input type="checkbox" id="togSync" checked><span class="sl"></span></label>Synchrotron Radiation</div>
+    <div class="tr"><label class="tg"><input type="checkbox" id="togQnt"><span class="sl"></span></label>Quantum Excitation</div>
+    <div class="tr"><label class="tg"><input type="checkbox" id="togBunch" checked><span class="sl"></span></label>Bunch Structure</div>
   </div>
-
-  <hr class="hr">
-  <div class="slbl">Physics</div>
-  <div class="toggle-row"><label class="toggle"><input type="checkbox" id="togRel" checked><span class="sl"></span></label>Special Relativity</div>
-  <div class="toggle-row"><label class="toggle"><input type="checkbox" id="togSyncRad"><span class="sl"></span></label>Synchrotron Radiation</div>
-
-  <hr class="hr">
-  <div class="slbl">Display</div>
-  <div class="toggle-row"><label class="toggle"><input type="checkbox" id="togTrail" checked><span class="sl"></span></label>Orbit Trail</div>
-  <div class="toggle-row"><label class="toggle"><input type="checkbox" id="togDipole" checked><span class="sl"></span></label>Dipole Magnets</div>
-  <div class="toggle-row"><label class="toggle"><input type="checkbox" id="togLabels" checked><span class="sl"></span></label>Labels</div>
-
-  <hr class="hr">
-  <button class="btn btn-go" id="runBtn">▶ Run Acceleration</button>
-  <button class="btn btn-clr" id="clrBtn">Clear</button>
-
-  <hr class="hr">
-  <div class="slbl">Physics Reference</div>
-  <div class="info">
-    <strong>Synchrotron Principle:</strong><br>
-    <code>R = p / (qB)</code> — fixed orbit, B tracks momentum<br><br>
-    <strong>RF Acceleration:</strong><br>
-    <code>ΔE = q × V_rf</code> — energy gain per turn<br><br>
-    <strong>Relativistic:</strong><br>
-    <code>γ = 1/√(1−β²)</code>, <code>E²=(pc)²+(mc²)²</code><br><br>
-    <strong>Synchrotron Radiation:</strong><br>
-    <code>P ∝ E⁴/(ρ²m⁴)</code> — dominant for electrons
+  <div class="cg">
+    <h3>Display</h3>
+    <div class="tr"><label class="tg"><input type="checkbox" id="togTrail" checked><span class="sl"></span></label>Beam Trail</div>
+    <div class="tr"><label class="tg"><input type="checkbox" id="togMag" checked><span class="sl"></span></label>Magnet Lattice</div>
+    <div class="tr"><label class="tg"><input type="checkbox" id="togLabel" checked><span class="sl"></span></label>Labels</div>
+    <div class="tr"><label class="tg"><input type="checkbox" id="togRad" checked><span class="sl"></span></label>Radiation Photons</div>
+  </div>
+  <button class="btn btn-go" id="btnRun">▶ Run</button>
+  <button class="btn btn-clr" id="btnClr">Clear</button>
+  <div class="fb">
+    <strong style="color:var(--ac)">Synchrotron Physics</strong><br>
+    <span class="eq">B = p/(qc)</span> — dipole tracks momentum<br>
+    <span class="eq">ΔE = qV<sub>rf</sub></span> — energy gain per turn<br>
+    <span class="eq">U₀ = Cγ E⁴/(ρ m⁴)</span> — radiation loss/turn<br>
+    <span class="eq">E² = (pc)²+(mc²)²</span>
   </div>
 </aside>
-
-<main>
-  <div class="ring-box">
-    <canvas id="ringCanvas"></canvas>
-    <div class="telemetry" id="telePanel"></div>
-  </div>
-  <div class="plot-box">
-    <div class="ptitle">Kinetic Energy vs Turn</div>
-    <canvas id="keCanvas"></canvas>
-  </div>
-  <div class="plot-box">
-    <div class="ptitle">Velocity / γ Factor vs Turn</div>
-    <canvas id="vgCanvas"></canvas>
-  </div>
-</main>
+<div class="main-grid">
+  <div class="ring-box"><canvas id="cRing"></canvas><div class="tele" id="tele"></div></div>
+  <div class="plot-box"><div class="ptitle">Energy vs Turn</div><canvas id="cKE"></canvas></div>
+  <div class="plot-box"><div class="ptitle">γ / β / B-field</div><canvas id="cGamma"></canvas></div>
 </div>
-
+</div>
 <script>
-const C = 2.998e8;
-const ME = 9.109e-31;
-const MP = 1.673e-27;
-const ML = 3.086e-25;
-const MPEV = 938.272;
-const MEEV = 0.511;
-const ML_EV = 193686;
-
-const PART = {
-  proton:   { mass_kg: MP, mass_ev: MPEV, charge: 1, name:'Proton',   sym:'p',    col:'#f87171' },
-  electron: { mass_kg: ME, mass_ev: MEEV, charge:-1, name:'Electron', sym:'e⁻',   col:'#60a5fa' },
-  positron: { mass_kg: ME, mass_ev: MEEV, charge: 1, name:'Positron', sym:'e⁺',   col:'#a78bfa' },
-  ion:      { mass_kg: ML, mass_ev: ML_EV,charge:54, name:'Lead Ion', sym:'Pb⁵⁴⁺',col:'#fbbf24' },
+"use strict";
+const PI=Math.PI,TAU=PI*2,C=2.998e8;
+const ME=0.51099895,MP=938.272088,ML=193686.3,MC=11177.9;
+const CG_E=8.846e-5;
+const PRESETS={
+  lhc:{e:6500,r:2804,v:16,h:35640,p:"proton"},tevatron:{e:980,r:1000,v:5,h:777,p:"proton"},
+  hera:{e:820,r:2665,v:11,h:4620,p:"electron"},lep:{e:104.5,r:4250,v:3.5,h:28080,p:"electron"},
+  rhs:{e:250,r:383.4,v:1,h:360,p:"lead"},sis18:{e:2,r:21.7,v:0.5,h:294,p:"carbon"},custom:null
 };
+const PART={
+  proton:{m:MP,q:1,n:"Proton",s:"p",c:"#f87171"},electron:{m:ME,q:-1,n:"Electron",s:"e⁻",c:"#60a5fa"},
+  positron:{m:ME,q:1,n:"Positron",s:"e⁺",c:"#a78bfa"},lead:{m:ML,q:54,n:"Pb-208",s:"Pb⁵⁴⁺",c:"#fbbf24"},
+  carbon:{m:MC,q:6,n:"C-12",s:"C⁶⁺",c:"#34d399"}
+};
+function Cg(m){return CG_E*(ME/m)**4;}
 
-function runSim(pType, R_m, V_rf_kV, nTurns, useRel, useSyncRad) {
-  const p = PART[pType];
-  const V_rf = V_rf_kV * 1000;
-  const circumference = 2 * Math.PI * R_m;
-  let E_MeV = p.mass_ev * 1.01;
-  let gamma = E_MeV / p.mass_ev;
-  let beta = useRel ? Math.sqrt(Math.max(1 - 1 / (gamma * gamma), 0)) : 0.01;
-  let p_MeV = gamma * p.mass_ev * beta;
+const DPR=window.devicePixelRatio||1;
+const MAX=2000,NBUNCH=32;
+let sim=null,run=false,lastT=0,total=0,circA=0;
+let D={ke:[],g:[],b:[],B:[],p:[],u:[]};
+let photons=[];
 
-  const KE  = new Float64Array(nTurns);
-  const gam = new Float64Array(nTurns);
-  const bet = new Float64Array(nTurns);
-  const B   = new Float64Array(nTurns);
-  const mom = new Float64Array(nTurns);
+function v(id){return document.getElementById(id)}
+function ck(id){return v(id).checked}
+function fit(c){const r=c.parentElement.getBoundingClientRect();const w=~~(r.width*DPR),h=~~(r.height*DPR);if(w>0&&h>0&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}return{w:c.width/DPR,h:c.height/DPR,dpr:DPR};}
+function mx(a){let m=-1e30;for(let i=0;i<a.length;i++)if(a[i]>m)m=a[i];return a.length?m:0;}
 
-  for (let t = 0; t < nTurns; t++) {
-    KE[t]  = (gamma - 1) * p.mass_ev;
-    gam[t] = gamma;
-    bet[t] = beta;
-    mom[t] = p_MeV;
-    B[t] = (p_MeV * 1e6) / (C * Math.abs(p.charge) * R_m);
+v("sEnergy").oninput=()=>v("vEnergy").textContent=v("sEnergy").value+" GeV";
+v("sRadius").oninput=()=>v("vRadius").textContent=v("sRadius").value+" m";
+v("sRF").oninput=()=>v("vRF").textContent=v("sRF").value+" MV";
+v("sH").oninput=()=>v("vH").textContent=v("sH").value;
+v("sSpd").oninput=()=>v("vSpd").textContent=v("sSpd").value+" t/f";
+v("selPreset").onchange=()=>{const p=PRESETS[v("selPreset").value];if(!p)return;v("sEnergy").value=p.e;v("vEnergy").textContent=p.e+" GeV";v("sRadius").value=p.r;v("vRadius").textContent=p.r+" m";v("sRF").value=p.v;v("vRF").textContent=p.v+" MV";v("sH").value=p.h;v("vH").textContent=p.h;v("selPart").value=p.p;};
 
-    E_MeV += Math.abs(p.charge) * V_rf / 1e6;
+function step(){
+  const{pt,Vrf,R,cg,rel,sync,qnt}=sim;
+  let E=sim.E;const m=pt.m;
+  let g=E/m;let bt=rel?Math.sqrt(Math.max(1-1/(g*g),0)):Math.sqrt(Math.max(2*(E-m)/m,0));
+  if(bt>0.9999999)bt=0.9999999;
+  let pm=g*m*bt;
+  let u0=sync?cg*(E/1e3)**4/(R*(m/1e3)**4):0;
 
-    if (useSyncRad && (pType === 'electron' || pType === 'positron')) {
-      const E_GeV = E_MeV / 1000;
-      const m_GeV = p.mass_ev / 1000;
-      const P_rad = 8.846e-5 * Math.pow(E_GeV, 4) / (R_m * R_m * Math.pow(m_GeV, 4));
-      E_MeV = Math.max(E_MeV - P_rad * (circumference / C) * 1000, p.mass_ev * 1.001);
+  D.ke.push(E-m);D.g.push(g);D.b.push(bt);D.B.push(pm*1e6/(C*Math.abs(pt.q)*R));D.p.push(pm);D.u.push(u0);
+  if(D.ke.length>MAX){D.ke.shift();D.g.shift();D.b.shift();D.B.shift();D.p.shift();D.u.shift();}
+  total++;
+
+  E+=Math.abs(pt.q)*Vrf/1e6;
+  if(sync)E=Math.max(E-u0,m*1.001);
+  if(qnt&&sync&&u0>0)E+=u0/(2*g)*0.1*(Math.random()-0.5)*2;
+  sim.E=E;sim.latestGamma=g;sim.latestBeta=bt;sim.latestB=D.B[D.B.length-1];sim.latestU0=u0;
+}
+
+function drawRing(){
+  const{w,h,dpr}=fit(v("cRing"));if(!w||!h)return;
+  const ctx=v("cRing").getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+  ctx.fillStyle="#080c14";ctx.fillRect(0,0,w,h);
+  const cx=w/2,cy=h/2,R=Math.min(w,h)*0.32,pt=PART[v("selPart").value];
+
+  const rg=ctx.createRadialGradient(cx,cy,R-8,cx,cy,R+8);
+  rg.addColorStop(0,"transparent");rg.addColorStop(0.5,"rgba(96,165,250,.06)");rg.addColorStop(1,"transparent");
+  ctx.fillStyle=rg;ctx.beginPath();ctx.arc(cx,cy,R+8,0,TAU);ctx.fill();
+
+  ctx.beginPath();ctx.arc(cx,cy,R,0,TAU);ctx.strokeStyle="#1a2340";ctx.lineWidth=5;ctx.stroke();
+
+  if(ck("togMag")){
+    const nD=8,nQ=nD*2;
+    for(let i=0;i<nD;i++){
+      const a=(i/nD)*TAU-PI/2,len=(TAU*R)/(nD*2.5);
+      ctx.save();ctx.translate(cx+R*Math.cos(a),cy+R*Math.sin(a));ctx.rotate(a+PI/2);
+      ctx.fillStyle="rgba(30,64,175,.2)";ctx.strokeStyle="#3b82f6";ctx.lineWidth=0.8;
+      ctx.fillRect(-len/2,-6,len,12);ctx.strokeRect(-len/2,-6,len,12);
+      if(ck("togLabel")){ctx.fillStyle="#60a5fa66";ctx.font="6px monospace";ctx.textAlign="center";ctx.fillText("D",0,2);}
+      ctx.restore();
     }
-
-    gamma = E_MeV / p.mass_ev;
-    beta = useRel ? Math.sqrt(Math.max(1 - 1 / (gamma * gamma), 0)) : Math.sqrt(Math.max(2 * KE[t] / p.mass_ev, 0));
-    if (beta >= 0.9999) beta = 0.9999;
-    p_MeV = gamma * p.mass_ev * beta;
-  }
-
-  return { KE, gamma: gam, beta: bet, B, momentum: mom, nTurns, circumference };
-}
-
-let simData = null;
-let animTurn = 0;
-let animRunning = false;
-let lastTime = 0;
-
-const ringCanvas = document.getElementById('ringCanvas');
-const keCanvas   = document.getElementById('keCanvas');
-const vgCanvas   = document.getElementById('vgCanvas');
-const telePanel  = document.getElementById('telePanel');
-const ringCtx    = ringCanvas.getContext('2d');
-const keCtx      = keCanvas.getContext('2d');
-const vgCtx      = vgCanvas.getContext('2d');
-
-const selParticle = document.getElementById('selParticle');
-const radSlider   = document.getElementById('radSlider');
-const rfSlider    = document.getElementById('rfSlider');
-const turnSlider  = document.getElementById('turnSlider');
-const runBtn      = document.getElementById('runBtn');
-const clrBtn      = document.getElementById('clrBtn');
-
-radSlider.oninput  = () => document.getElementById('radVal').textContent  = radSlider.value + ' m';
-rfSlider.oninput   = () => document.getElementById('rfVal').textContent   = rfSlider.value + ' kV';
-turnSlider.oninput = () => document.getElementById('turnVal').textContent = turnSlider.value;
-
-function arrMax(arr, n) {
-  let m = -Infinity;
-  for (let i = 0; i < n; i++) if (arr[i] > m) m = arr[i];
-  return m;
-}
-
-function fitCanvas(c) {
-  const dpr = window.devicePixelRatio || 1;
-  const rect = c.parentElement.getBoundingClientRect();
-  const w = Math.round(rect.width * dpr);
-  const h = Math.round(rect.height * dpr);
-  if (w > 0 && h > 0 && (c.width !== w || c.height !== h)) {
-    c.width = w;
-    c.height = h;
-  }
-  return { w: c.width / dpr, h: c.height / dpr, dpr };
-}
-
-// =============================================================================
-//  DRAW RING
-// =============================================================================
-function drawRing() {
-  const { w, h, dpr } = fitCanvas(ringCanvas);
-  if (w === 0 || h === 0) return;
-  const ctx = ringCtx;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#080c14';
-  ctx.fillRect(0, 0, w, h);
-
-  const cx = w / 2, cy = h / 2;
-  const R = Math.min(w, h) * 0.32;
-
-  ctx.beginPath();
-  ctx.arc(cx, cy, R, 0, 2 * Math.PI);
-  ctx.strokeStyle = '#253358';
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  if (document.getElementById('togDipole').checked) {
-    const nD = 8;
-    for (let i = 0; i < nD; i++) {
-      const a = (i / nD) * 2 * Math.PI - Math.PI / 2;
-      const len = (2 * Math.PI * R) / (nD * 2.5);
-      ctx.save();
-      ctx.translate(cx + R * Math.cos(a), cy + R * Math.sin(a));
-      ctx.rotate(a);
-      ctx.fillStyle = '#1e40af44';
-      ctx.strokeStyle = '#3b82f6';
-      ctx.lineWidth = 1;
-      ctx.fillRect(-len / 2, -8, len, 16);
-      ctx.strokeRect(-len / 2, -8, len, 16);
-      if (document.getElementById('togLabels').checked) {
-        ctx.fillStyle = '#60a5fa88';
-        ctx.font = '8px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('B', 0, 3);
-      }
+    for(let i=0;i<nQ;i++){
+      const a=(i/nQ)*TAU-PI/2+PI/nQ;
+      ctx.save();ctx.translate(cx+R*Math.cos(a),cy+R*Math.sin(a));
+      ctx.fillStyle="rgba(234,179,8,.15)";ctx.strokeStyle="#eab30866";ctx.lineWidth=0.6;
+      ctx.fillRect(-3,-3,6,6);ctx.strokeRect(-3,-3,6,6);
       ctx.restore();
     }
   }
 
-  ctx.beginPath();
-  ctx.arc(cx, cy, R, -Math.PI / 2 - 0.15, -Math.PI / 2 + 0.15);
-  ctx.strokeStyle = '#fbbf24';
-  ctx.lineWidth = 6;
-  ctx.stroke();
-  ctx.lineWidth = 3;
+  ctx.save();ctx.translate(cx,cy-R);
+  ctx.fillStyle="rgba(251,191,36,.25)";ctx.strokeStyle="#fbbf24";ctx.lineWidth=1.5;
+  ctx.fillRect(-8,-8,16,16);ctx.strokeRect(-8,-8,16,16);
+  ctx.beginPath();ctx.moveTo(-4,4);ctx.lineTo(-1,-3);ctx.lineTo(2,3);ctx.lineTo(4,-4);
+  ctx.strokeStyle="#fbbf24";ctx.lineWidth=1.2;ctx.stroke();
+  if(ck("togLabel")){ctx.fillStyle="#fbbf24";ctx.font="bold 8px monospace";ctx.textAlign="center";ctx.fillText("RF",0,-14);ctx.fillStyle="#fbbf2488";ctx.font="7px monospace";ctx.fillText(v("sRF").value+" MV",0,16);}
+  ctx.restore();
 
-  if (document.getElementById('togLabels').checked) {
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('RF CAVITY', cx, cy - R - 16);
-    ctx.font = '8px monospace';
-    ctx.fillStyle = '#fbbf2488';
-    ctx.fillText('V = ' + rfSlider.value + ' kV', cx, cy - R - 6);
-  }
-
-  if (simData && animTurn > 0) {
-    const color = PART[selParticle.value].col;
-
-    if (document.getElementById('togTrail').checked && animTurn > 1) {
-      const trailLen = Math.min(animTurn, 400);
-      const start = Math.max(0, animTurn - trailLen);
-      ctx.lineWidth = 1.5;
-      for (let i = start; i < animTurn; i++) {
-        const a1 = (i / simData.nTurns) * 2 * Math.PI * 6;
-        const a2 = ((i + 1) / simData.nTurns) * 2 * Math.PI * 6;
-        ctx.beginPath();
-        ctx.moveTo(cx + R * Math.cos(a1), cy + R * Math.sin(a1));
-        ctx.lineTo(cx + R * Math.cos(a2), cy + R * Math.sin(a2));
-        ctx.strokeStyle = color;
-        ctx.globalAlpha = ((i - start) / trailLen) * 0.7;
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
+  if(ck("togRad")&&run&&total>0){
+    for(let i=photons.length-1;i>=0;i--){
+      const ph=photons[i];
+      ph.life-=0.02;ph.r+=1.5;
+      if(ph.life<=0){photons.splice(i,1);continue;}
+      ctx.globalAlpha=ph.life*0.5;
+      ctx.fillStyle="#a78bfa";
+      ctx.beginPath();ctx.arc(cx+R*Math.cos(ph.a),cy+R*Math.sin(ph.a),1.5,0,TAU);ctx.fill();
     }
+    ctx.globalAlpha=1;
+    if(total%3===0&&sim.latestU0>0){
+      photons.push({a:circA,life:1,r:0});
+      if(photons.length>80)photons.shift();
+    }
+  }
 
-    const angle = (animTurn / simData.nTurns) * 2 * Math.PI * 6;
-    const px = cx + R * Math.cos(angle);
-    const py = cy + R * Math.sin(angle);
+  if(run&&total>0&&ck("togTrail")){
+    const n=D.ke.length,trail=Math.min(n,500),start=Math.max(0,n-trail);
+    for(let i=start;i<n;i++){
+      const a1=(i*0.06),a2=((i+1)*0.06);
+      ctx.strokeStyle=pt.c;ctx.globalAlpha=((i-start)/trail)*0.4;ctx.lineWidth=1.2;
+      ctx.beginPath();ctx.moveTo(cx+R*Math.cos(a1),cy+R*Math.sin(a1));
+      ctx.lineTo(cx+R*Math.cos(a2),cy+R*Math.sin(a2));ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
 
-    const grad = ctx.createRadialGradient(px, py, 0, px, py, 18);
-    grad.addColorStop(0, color + '88');
-    grad.addColorStop(1, 'transparent');
-    ctx.fillStyle = grad;
+  if(run&&total>0){
+    circA+=0.04;
+    const nb=ck("togBunch")?NBUNCH:1;
+    for(let i=0;i<nb;i++){
+      const phase=circA+i*TAU/nb;
+      const spread=ck("togBunch")?0.08:0;
+      const dphase=phase+(Math.sin(phase*7+total*0.01)*spread);
+      const px=cx+R*Math.cos(dphase),py=cy+R*Math.sin(dphase);
+      const sz=i===0?4:2;
+      const alpha=i===0?1:0.5;
+      ctx.globalAlpha=alpha;
+      if(i===0){
+        const grd=ctx.createRadialGradient(px,py,0,px,py,16);
+        grd.addColorStop(0,pt.c+"66");grd.addColorStop(1,"transparent");
+        ctx.fillStyle=grd;ctx.beginPath();ctx.arc(px,py,16,0,TAU);ctx.fill();
+      }
+      ctx.fillStyle=pt.c;ctx.beginPath();ctx.arc(px,py,sz,0,TAU);ctx.fill();
+    }
+    ctx.globalAlpha=1;
+    const lpx=cx+R*Math.cos(circA),lpy=cy+R*Math.sin(circA);
+    ctx.strokeStyle="#fff";ctx.lineWidth=1;ctx.beginPath();ctx.arc(lpx,lpy,5,0,TAU);ctx.stroke();
+  }
+
+  if(ck("togLabel")){
+    ctx.fillStyle="#475569";ctx.font="8px monospace";ctx.textAlign="left";
+    ctx.fillText("R = "+v("sRadius").value+" m  C = "+(2*PI*+v("sRadius").value).toFixed(0)+" m",6,h-6);
+  }
+}
+
+function drawKE(){
+  const{w,h,dpr}=fit(v("cKE"));if(!D.ke.length||!w||!h)return;
+  const ctx=v("cKE").getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+  ctx.fillStyle="#080c14";ctx.fillRect(0,0,w,h);
+  const pl=48,pr=8,pt=20,pb=22,pw=w-pl-pr,ph=h-pt-pb;if(pw<=0||ph<=0)return;
+  const n=D.ke.length,vn=Math.min(n,MAX),si=Math.max(0,n-MAX);
+  const kmx=mx(D.ke.slice(si,si+vn))*1.15||100;
+
+  ctx.strokeStyle="#1a2340";ctx.lineWidth=.5;
+  for(let i=0;i<=4;i++){
+    const gy=pt+ph-(i/4)*ph;ctx.beginPath();ctx.moveTo(pl,gy);ctx.lineTo(pl+pw,gy);ctx.stroke();
+    ctx.fillStyle="#475569";ctx.font="7px monospace";ctx.textAlign="right";
+    const vv=i/4*kmx;ctx.fillText(vv>=1e3?(vv/1e3).toFixed(1)+"G":vv.toFixed(0)+"M",pl-3,gy+3);
+  }
+  ctx.textAlign="center";ctx.fillStyle="#475569";ctx.font="7px monospace";
+  ctx.fillText(total-vn+"→"+total,pl+pw/2,h-5);
+
+  ctx.beginPath();
+  for(let i=0;i<vn;i++){
+    const x=pl+(i/MAX)*pw,y=pt+ph-(D.ke[si+i]/kmx)*ph;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle="#f87171";ctx.lineWidth=1.5;ctx.stroke();
+  const lx=pl+((vn-1)/MAX)*pw;
+  ctx.lineTo(lx,pt+ph);ctx.lineTo(pl,pt+ph);ctx.closePath();ctx.fillStyle="#f8717110";ctx.fill();
+
+  const umx=mx(D.u.slice(si,si+vn))*1.15||1;
+  if(umx>0.001){
     ctx.beginPath();
-    ctx.arc(px, py, 18, 0, 2 * Math.PI);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(px, py, 5, 0, 2 * Math.PI);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    for(let i=0;i<vn;i++){
+      const x=pl+(i/MAX)*pw,y=pt+ph-(D.u[si+i]/umx)*ph;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle="#fbbf2466";ctx.lineWidth=1;ctx.setLineDash([2,2]);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle="#fbbf2488";ctx.font="7px monospace";ctx.textAlign="right";
+    ctx.fillText("U₀:"+umx.toFixed(2)+" MeV",w-pr,pt+10);
   }
 
-  if (document.getElementById('togLabels').checked) {
-    ctx.fillStyle = '#475569';
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText('R = ' + radSlider.value + ' m', 10, h - 20);
-    ctx.fillText('C = ' + (2 * Math.PI * parseInt(radSlider.value)).toFixed(0) + ' m', 10, h - 8);
-  }
+  ctx.beginPath();ctx.arc(lx,pt+ph-(D.ke[n-1]/kmx)*ph,3,0,TAU);ctx.fillStyle="#f87171";ctx.fill();
+  if(ck("togSync")){ctx.fillStyle="#fbbf2466";ctx.font="7px monospace";ctx.textAlign="right";ctx.fillText("Sync Rad",w-pr,pt+20);}
 }
 
-// =============================================================================
-//  DRAW KE
-// =============================================================================
-function drawKE() {
-  const { w, h, dpr } = fitCanvas(keCanvas);
-  if (!simData || w === 0 || h === 0) return;
-  const ctx = keCtx;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#080c14';
-  ctx.fillRect(0, 0, w, h);
+function drawGamma(){
+  const{w,h,dpr}=fit(v("cGamma"));if(!D.g.length||!w||!h)return;
+  const ctx=v("cGamma").getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+  ctx.fillStyle="#080c14";ctx.fillRect(0,0,w,h);
+  const pl=48,pr=8,pt=20,pb=22,pw=w-pl-pr,ph=h-pt-pb;if(pw<=0||ph<=0)return;
+  const n=D.g.length,vn=Math.min(n,MAX),si=Math.max(0,n-MAX);
+  const gmx=mx(D.g.slice(si,si+vn))*1.15||2;
+  const bmx=mx(D.B.slice(si,si+vn))*1.15||1;
 
-  const pad = {l:55, r:12, t:24, b:32};
-  const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
-  if (pw <= 0 || ph <= 0) return;
-  const nDraw = Math.min(animTurn + 1, simData.nTurns);
-  if (nDraw < 1) return;
-
-  const keMax = arrMax(simData.KE, nDraw) * 1.15 || 100;
-
-  ctx.strokeStyle = '#1a2340';
-  ctx.lineWidth = 0.5;
-  for (let i = 0; i <= 4; i++) {
-    const gy = pad.t + ph - (i / 4) * ph;
-    ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(pad.l + pw, gy); ctx.stroke();
-    ctx.fillStyle = '#475569';
-    ctx.font = '8px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText((i / 4 * keMax).toFixed(0) + ' MeV', pad.l - 4, gy + 3);
+  ctx.strokeStyle="#1a2340";ctx.lineWidth=.5;
+  for(let i=0;i<=4;i++){
+    const gy=pt+ph-(i/4)*ph;ctx.beginPath();ctx.moveTo(pl,gy);ctx.lineTo(pl+pw,gy);ctx.stroke();
+    ctx.fillStyle="#475569";ctx.font="7px monospace";ctx.textAlign="right";
+    ctx.fillText((i/4*gmx).toFixed(1),pl-3,gy+3);
   }
-  ctx.textAlign = 'center';
-  ctx.fillText('Turn Number', pad.l + pw / 2, h - 6);
+  ctx.textAlign="center";ctx.fillStyle="#475569";ctx.font="7px monospace";
+  ctx.fillText(total-vn+"→"+total,pl+pw/2,h-5);
 
-  ctx.beginPath();
-  for (let i = 0; i < nDraw; i++) {
-    const x = pad.l + (i / simData.nTurns) * pw;
-    const y = pad.t + ph - (simData.KE[i] / keMax) * ph;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  }
-  ctx.strokeStyle = '#f87171';
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  ctx.beginPath();for(let i=0;i<vn;i++){const x=pl+(i/MAX)*pw,y=pt+ph-(D.g[si+i]/gmx)*ph;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.strokeStyle="#34d399";ctx.lineWidth=1.5;ctx.stroke();
+  ctx.beginPath();for(let i=0;i<vn;i++){const x=pl+(i/MAX)*pw,y=pt+ph-D.b[si+i]*ph;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.strokeStyle="#22d3ee";ctx.lineWidth=1;ctx.setLineDash([3,2]);ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();for(let i=0;i<vn;i++){const x=pl+(i/MAX)*pw,y=pt+ph-(D.B[si+i]/bmx)*ph;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.strokeStyle="#f472b688";ctx.lineWidth=1;ctx.setLineDash([1,2]);ctx.stroke();ctx.setLineDash([]);
 
-  const lastX = pad.l + ((nDraw - 1) / simData.nTurns) * pw;
-  ctx.lineTo(lastX, pad.t + ph);
-  ctx.lineTo(pad.l, pad.t + ph);
-  ctx.closePath();
-  ctx.fillStyle = '#f8717115';
-  ctx.fill();
+  ctx.font="7px monospace";ctx.textAlign="right";
+  ctx.fillStyle="#34d399";ctx.fillText("γ",w-pr,pt+8);
+  ctx.fillStyle="#22d3ee";ctx.fillText("β",w-pr,pt+16);
+  ctx.fillStyle="#f472b6";ctx.fillText("B",w-pr,pt+24);
 
-  ctx.beginPath();
-  ctx.arc(lastX, pad.t + ph - (simData.KE[nDraw - 1] / keMax) * ph, 4, 0, 2 * Math.PI);
-  ctx.fillStyle = '#f87171';
-  ctx.fill();
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  if (document.getElementById('togSyncRad').checked && (selParticle.value === 'electron' || selParticle.value === 'positron')) {
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 9px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText('Synchrotron Radiation Active', w - pad.r, pad.t + 14);
-  }
+  const lx=pl+((vn-1)/MAX)*pw;
+  ctx.beginPath();ctx.arc(lx,pt+ph-(D.g[n-1]/gmx)*ph,2.5,0,TAU);ctx.fillStyle="#34d399";ctx.fill();
+  ctx.beginPath();ctx.arc(lx,pt+ph-D.b[n-1]*ph,2.5,0,TAU);ctx.fillStyle="#22d3ee";ctx.fill();
+  ctx.beginPath();ctx.arc(lx,pt+ph-(D.B[n-1]/bmx)*ph,2.5,0,TAU);ctx.fillStyle="#f472b6";ctx.fill();
 }
 
-// =============================================================================
-//  DRAW GAMMA / BETA
-// =============================================================================
-function drawGammaBeta() {
-  const { w, h, dpr } = fitCanvas(vgCanvas);
-  if (!simData || w === 0 || h === 0) return;
-  const ctx = vgCtx;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#080c14';
-  ctx.fillRect(0, 0, w, h);
-
-  const pad = {l:55, r:12, t:24, b:32};
-  const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
-  if (pw <= 0 || ph <= 0) return;
-  const nDraw = Math.min(animTurn + 1, simData.nTurns);
-  if (nDraw < 1) return;
-
-  const gMax = arrMax(simData.gamma, nDraw) * 1.15 || 2;
-
-  ctx.strokeStyle = '#1a2340';
-  ctx.lineWidth = 0.5;
-  for (let i = 0; i <= 4; i++) {
-    const gy = pad.t + ph - (i / 4) * ph;
-    ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(pad.l + pw, gy); ctx.stroke();
-    ctx.fillStyle = '#475569';
-    ctx.font = '8px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText((i / 4 * gMax).toFixed(1), pad.l - 4, gy + 3);
-  }
-  ctx.textAlign = 'center';
-  ctx.fillText('Turn Number', pad.l + pw / 2, h - 6);
-
-  ctx.beginPath();
-  for (let i = 0; i < nDraw; i++) {
-    const x = pad.l + (i / simData.nTurns) * pw;
-    const y = pad.t + ph - (simData.gamma[i] / gMax) * ph;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  }
-  ctx.strokeStyle = '#34d399';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  ctx.beginPath();
-  for (let i = 0; i < nDraw; i++) {
-    const x = pad.l + (i / simData.nTurns) * pw;
-    const y = pad.t + ph - simData.beta[i] * ph;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  }
-  ctx.strokeStyle = '#22d3ee';
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([4, 3]);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  ctx.font = '9px monospace';
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#34d399';
-  ctx.fillText('— γ (gamma)', w - pad.r, pad.t + 12);
-  ctx.fillStyle = '#22d3ee';
-  ctx.fillText('--- β (v/c)', w - pad.r, pad.t + 24);
-
-  const lastX = pad.l + ((nDraw - 1) / simData.nTurns) * pw;
-  ctx.beginPath(); ctx.arc(lastX, pad.t + ph - (simData.gamma[nDraw - 1] / gMax) * ph, 3, 0, 2 * Math.PI);
-  ctx.fillStyle = '#34d399'; ctx.fill();
-  ctx.beginPath(); ctx.arc(lastX, pad.t + ph - simData.beta[nDraw - 1] * ph, 3, 0, 2 * Math.PI);
-  ctx.fillStyle = '#22d3ee'; ctx.fill();
+function updateTele(){
+  if(!D.ke.length){v("tele").innerHTML="";return;}
+  const i=D.ke.length-1,pt=PART[v("selPart").value],R=+v("sRadius").value;
+  const ke=D.ke[i],g=D.g[i],bt=D.b[i],B=D.B[i],u0=D.u[i];
+  const circ=2*PI*R;
+  const tR=(circ/(bt*C)*1e6).toFixed(2);
+  const fRF=(C/circ*+v("sH").value/1e6).toFixed(2);
+  const tauD=u0>0.001?(2*MP/(u0*1e6*C/circ)).toFixed(3):"∞";
+  v("tele").innerHTML=
+    '<span style="color:'+pt.c+'">■</span> <strong>'+pt.s+'</strong> — T='+total+'<br>'+
+    'KE = <span class="r">'+(ke/1e3).toFixed(3)+' GeV</span><br>'+
+    'p = <span class="v">'+(D.p[i]/1e3).toFixed(3)+' GeV/c</span><br>'+
+    'γ = <span class="g">'+g.toFixed(4)+'</span><br>'+
+    'β = <span class="v">'+(bt*100).toFixed(6)+'%</span><br>'+
+    'B = <span class="v">'+B.toFixed(4)+' T</span><br>'+
+    'U₀ = <span class="y">'+u0.toFixed(4)+' MeV</span><br>'+
+    'τ_d = <span class="g">'+tauD+' turns</span><br>'+
+    'T = <span class="v">'+tR+' μs</span><br>'+
+    'f = <span class="v">'+fRF+' MHz</span>';
 }
 
-function updateTele() {
-  if (!simData || animTurn >= simData.nTurns) { telePanel.innerHTML = ''; return; }
-  const i = Math.min(animTurn, simData.nTurns - 1);
-  const p = PART[selParticle.value];
-  telePanel.innerHTML =
-    '<span style="color:' + p.col + '">■</span> <strong>' + p.sym + '</strong> — Turn ' + i + '<br>' +
-    'v = <span class="v">' + (simData.beta[i]*100).toFixed(4) + '%</span> of c<br>' +
-    'KE = <span class="r">' + (simData.KE[i]/1000).toFixed(4) + ' GeV</span><br>' +
-    'γ = <span class="g">' + simData.gamma[i].toFixed(4) + '</span><br>' +
-    'p = <span class="v">' + (simData.momentum[i]/1000).toFixed(4) + ' GeV/c</span><br>' +
-    'B = <span class="v">' + simData.B[i].toFixed(4) + ' T</span>';
-}
+function render(){drawRing();drawKE();drawGamma();updateTele();}
 
-function renderFrame() {
-  drawRing();
-  drawKE();
-  drawGammaBeta();
-  updateTele();
-}
-
-// =============================================================================
-//  ANIMATION
-// =============================================================================
-function animate(timestamp) {
-  if (!animRunning) return;
-  if (!lastTime) lastTime = timestamp;
-  let dt = timestamp - lastTime;
-  lastTime = timestamp;
-  dt = Math.min(dt, 50);
-
-  animTurn += Math.max(1, Math.round(dt * simData.nTurns / 5000));
-  animTurn = Math.min(animTurn, simData.nTurns);
-
-  renderFrame();
-
-  if (animTurn >= simData.nTurns) {
-    animRunning = false;
-    runBtn.textContent = '▶ Run Acceleration';
-    lastTime = 0;
-    return;
-  }
+function animate(ts){
+  if(!run)return;
+  if(!lastT)lastT=ts;
+  lastT=ts;
+  const spd=+v("sSpd").value||100;
+  for(let i=0;i<spd;i++)step();
+  render();
   requestAnimationFrame(animate);
 }
 
-runBtn.addEventListener('click', () => {
-  if (animRunning) {
-    animRunning = false;
-    runBtn.textContent = '▶ Run Acceleration';
-    lastTime = 0;
-    return;
-  }
+v("btnRun").onclick=()=>{
+  if(run){run=false;v("btnRun").textContent="▶ Run";lastT=0;return;}
+  const pt=PART[v("selPart").value];
+  sim={pt,Vrf:+v("sRF").value*1e6,R:+v("sRadius").value,cg:Cg(pt.m),rel:ck("togRel"),sync:ck("togSync"),qnt:ck("togQnt"),
+    E:Math.max(+v("sEnergy").value*0.01,pt.m*1.001),latestGamma:1,latestBeta:0,latestB:0,latestU0:0};
+  D={ke:[],g:[],b:[],B:[],p:[],u:[]};total=0;circA=0;photons=[];run=true;lastT=0;
+  v("btnRun").textContent="⏸ Pause";requestAnimationFrame(animate);
+};
+v("btnClr").onclick=()=>{run=false;sim=null;D={ke:[],g:[],b:[],B:[],p:[],u:[]};total=0;circA=0;photons=[];lastT=0;v("btnRun").textContent="▶ Run";v("tele").innerHTML="";render();};
 
-  simData = runSim(
-    selParticle.value,
-    parseFloat(radSlider.value),
-    parseFloat(rfSlider.value),
-    parseInt(turnSlider.value),
-    document.getElementById('togRel').checked,
-    document.getElementById('togSyncRad').checked
-  );
-
-  animTurn = 0;
-  animRunning = true;
-  lastTime = 0;
-  runBtn.textContent = '⏸ Pause';
-  requestAnimationFrame(animate);
-});
-
-clrBtn.addEventListener('click', () => {
-  animRunning = false;
-  simData = null;
-  animTurn = 0;
-  lastTime = 0;
-  runBtn.textContent = '▶ Run Acceleration';
-  telePanel.innerHTML = '';
-  renderFrame();
-});
-
-renderFrame();
+window.addEventListener("resize",()=>render());
+v("selPreset").dispatchEvent(new Event("change"));render();
 </script>
 </body>
 </html>
